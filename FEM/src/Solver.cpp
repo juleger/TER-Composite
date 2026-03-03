@@ -38,7 +38,12 @@ void Solver::clearBCs() {
 }
 
 void Solver::assemble() {
+    cout << "Assemblage en cours..." << endl;
+    
     vector<Triplet<double>> triplets;
+    int nbElements = _mesh.elements.size();
+    triplets.reserve(nbElements * 36);
+    int count = 0;
     
     for (const auto& elem : _mesh.elements) {
         if (elem.Ke.norm() < 1e-20) continue;
@@ -54,33 +59,42 @@ void Solver::assemble() {
                 triplets.push_back(Triplet<double>(dofMap[i], dofMap[j], elem.Ke(i,j)));
             }
         }
+        
+        count++;
     }
-    
     _K.setFromTriplets(triplets.begin(), triplets.end());
-    cout << "Assemblage : Matrice " << _K.rows() << "x" << _K.cols() << ", nnz = " << _K.nonZeros() << endl;
+    cout << "Assemblage terminé : Matrice " << _K.rows() << "x" << _K.cols() 
+         << ", nnz = " << _K.nonZeros() << endl;
 }
 
 void Solver::applyBC() {
+    cout << "Application des conditions aux limites..." << endl;
+    
     // Appliquer les forces (Neumann BC)
     for (const auto& force : _neumannBCs) {
         int dof = force.first;
         double value = force.second;
         _F(dof) += value;
     }
-    
-    // Appliquer les déplacements imposés (Dirichlet BC)
+    // Méthode efficace : ne modifier que les coefficients existants
     for (const auto& disp : _dirichletBCs) {
         int dof = disp.first;
         double value = disp.second;
         
-        // Modifier la matrice K: mettre 1 sur la diagonale, 0 ailleurs dans la ligne/colonne
-        for (int j = 0; j < _K.cols(); ++j) {
-            if (j != dof) {
-                _K.coeffRef(dof, j) = 0.0;
-                _K.coeffRef(j, dof) = 0.0;
+        // Mettre à zéro la ligne et la colonne correspondantes
+        // en parcourant seulement les coefficients non-nuls
+        for (int k = 0; k < _K.outerSize(); ++k) {
+            for (SparseMatrix<double>::InnerIterator it(_K, k); it; ++it) {
+                if (it.row() == dof || it.col() == dof) {
+                    if (it.row() == dof && it.col() == dof) {
+                        it.valueRef() = 1.0;
+                    } else {
+                        it.valueRef() = 0.0;
+                    }
+                }
             }
         }
-        _K.coeffRef(dof, dof) = 1.0;
+        
         _F(dof) = value;
     }
     
@@ -89,40 +103,34 @@ void Solver::applyBC() {
 }
 
 void Solver::solveConjugateGradient() {
-    cout << "Résolution..." << endl;
+    cout << "\n Résolution par gradient conjugué..." << endl;
+    auto t0 = std::chrono::high_resolution_clock::now();
 
-    // Gradient conjugué préconditionné avec Incomplete Cholesky
-    ConjugateGradient<SparseMatrix<double>, Lower|Upper, IncompleteCholesky<double>> solver;
-    solver.setTolerance(1e-12);
-    solver.setMaxIterations(10000);
+    ConjugateGradient<SparseMatrix<double>, Lower|Upper, DiagonalPreconditioner<double>> solver;
+    solver.setTolerance(_tol);
+    solver.setMaxIterations(_maxIter);
     solver.compute(_K);
     
     if (solver.info() != Success) {
-        cerr << "Erreur : échec de l'initialisation du gradient conjugué préconditionné" << endl;
+        cerr << "Erreur : échec de l'initialisation du gradient conjugué" << endl;
         return;
     }
-    
-    // lancer le chrono
-    
-    auto t0 = std::chrono::high_resolution_clock::now();
     _U = solver.solve(_F);
+    
     auto t1 = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> elapsed = t1 - t0;
 
     if (solver.info() != Success) {
-        cerr << "Erreur : le gradient conjugué préconditionné n'a pas convergé" << endl;
+        cerr << "Erreur : le gradient conjugué n'a pas convergé" << endl;
         cerr << "Itérations: " << solver.iterations() << ", erreur: " << solver.error() << endl;
         cerr << "Temps de résolution: " << elapsed.count() << " s" << endl;
         return;
     }
 
-    // Afficher nombre d'itérations et temps
-    cout << "Gradient conjugué préconditionné: itérations = " << solver.iterations()
-         << ", erreur = " << solver.error()
-         << ", temps = " << elapsed.count() << " s" << endl;
-
-    
-    cout << "Résolution terminée" << endl;
+    // Afficher résumé
+    cout << "\n=== Résolution terminée ===" << endl;
+    cout << "Itérations: " << solver.iterations() << endl;
+    cout << "Temps: " << elapsed.count() << " s" << endl;
 }
 
 void Solver::saveResults(const string& filename) const {
@@ -145,7 +153,6 @@ void Solver::saveResults(const string& filename) const {
     }
     
     file.close();
-    cout << "Résultats sauvegardés dans " << filename << endl;
 }
 
 void Solver::saveVTK(const string& filename) const {

@@ -50,6 +50,7 @@ public:
     void loadFromGmsh(const std::string& filename);
     void initializeElements();
     void computeGeometry();
+    void scaleCoordinates(double scale);  // Applique un facteur d'échelle aux coordonnées
     
     std::vector<int> findNodesAtY(double y, double tol = 1e-6) const;
 };

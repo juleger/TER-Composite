@@ -1,4 +1,5 @@
 #include "MeshReader.h"
+#include "Material.h"
 #include <iostream>
 #include <sstream>
 #include <algorithm>

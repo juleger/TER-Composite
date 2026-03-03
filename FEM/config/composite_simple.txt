@@ -1,0 +1,24 @@
+# Configuration pour test composite C/C (Carbone/Carbone)
+# Carré avec fibre carbone au centre dans matrice carbone - test de traction
+
+test_type = composite
+
+# Fichier de maillage
+mesh_file = mesh/composite_simple.msh
+
+dimension_scale = 7e-6
+
+Young_modulus = 215e9
+Poisson_ratio = 0.41
+density = 1800             # kg/m³
+
+Young_modulus_fiber = 228e9  # 350 GPa
+Poisson_ratio_fiber = 0.2
+density_fiber = 1800         # kg/m³
+
+# Chargement
+force_value = 1000         # Force en N
+
+# Sortie
+output_dir = results
+output_prefix = composite_simple

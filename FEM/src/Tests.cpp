@@ -23,6 +23,7 @@ void runTractionTest(const string& meshFile, const Config& config) {
     reader.readGmshFile(meshFile);
     mesh.initializeElements();
     mesh.computeGeometry();
+    mesh.scaleCoordinates(config.dimensionScale);  // Appliquer le facteur d'échelle
     
     cout << "Noeuds: " << mesh.nbNodes() << ", Eléments: " << mesh.nbElements() << endl;
     cout << "Dimensions: " << mesh.width() << " x " << mesh.height() << " m\n" << endl;
@@ -96,11 +97,12 @@ void runFlexionTest(const string& meshFile, const Config& config) {
     reader.readGmshFile(meshFile);
     mesh.initializeElements();
     mesh.computeGeometry();
+    mesh.scaleCoordinates(config.dimensionScale);  // Appliquer le facteur d'échelle
     
     cout << "Noeuds: " << mesh.nbNodes() << ", Eléments: " << mesh.nbElements() << endl;
     cout << "Dimensions: " << mesh.width() << " x " << mesh.height() << " m\n" << endl;
     
-    Solver solver(mesh);
+    Solver solver(mesh, 1e-6, 2000);
     solver.assemble();
     
     // Encastrement complet à gauche
@@ -163,12 +165,13 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     reader.readGmshFile(meshFile);
     mesh.initializeElements();
     mesh.computeGeometry();
+    mesh.scaleCoordinates(config.dimensionScale);  // Appliquer le facteur d'échelle
     
     cout << "Noeuds: " << mesh.nbNodes() << ", Eléments: " << mesh.nbElements() << endl;
     cout << "Dimensions: " << mesh.width() << " x " << mesh.height() << " m\n" << endl;
     
     // Résolution
-    Solver solver(mesh);
+    Solver solver(mesh, 1e-6, 2000);
     solver.assemble();
     
     // Conditions aux limites: encastrement à gauche, force à droite

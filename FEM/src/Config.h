@@ -26,6 +26,9 @@ public:
     // Forces appliquées
     double forceValue;  // Valeur de la force (N)
     
+    // Facteur d'échelle des dimensions
+    double dimensionScale;  // Facteur pour convertir coordonnées maillage vers mètres (ex: 0.07e-6 pour 0.07 µm/pixel)
+    
     // Fichiers de sortie
     std::string outputDir;
     std::string outputFilePrefix;

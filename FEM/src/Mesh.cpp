@@ -127,3 +127,21 @@ vector<int> Mesh::findNodesAtY(double y, double tol) const {
     }
     return result;
 }
+
+void Mesh::scaleCoordinates(double scale) {
+    if (abs(scale - 1.0) < 1e-12) return;  // Pas de scaling nécessaire
+    
+    // Scaler toutes les coordonnées des nœuds
+    for (auto& node : nodes) {
+        node.coords *= scale;
+    }
+    
+    // Mettre à jour les limites géométriques
+    xMin *= scale;
+    xMax *= scale;
+    yMin *= scale;
+    yMax *= scale;
+    
+    // Recalculer les aires et matrices de rigidité des éléments
+    initializeElements();
+}

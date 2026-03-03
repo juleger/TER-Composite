@@ -12,7 +12,8 @@ Config::Config() {
     nu = 0.3;
     rho = 7850.0;
     forceValue = 1000.0;
-    outputDir = "../results";
+    dimensionScale = 1.0;  // Par défaut, pas de scaling
+    outputDir = "results";
     outputFilePrefix = "test";
 }
 
@@ -21,7 +22,7 @@ void Config::loadFromFile(const string& filename) {
     
     // Charger les paramètres
     testType = getString("test_type", "traction");
-    meshFile = getString("mesh_file", "../mesh/rectangle1.msh");
+    meshFile = getString("mesh_file", "mesh/rectangle1.msh");
     
     // Matériau 1 (matrice)
     E = getDouble("Young_modulus", 200.0e9);
@@ -35,7 +36,8 @@ void Config::loadFromFile(const string& filename) {
     hasFiber = (params.find("Young_modulus_fiber") != params.end());
     
     forceValue = getDouble("force_value", 1000.0);
-    outputDir = getString("output_dir", "../results");
+    dimensionScale = getDouble("dimension_scale", 1.0);
+    outputDir = getString("output_dir", "results");
     outputFilePrefix = getString("output_prefix", "test");
 }
 
@@ -97,19 +99,12 @@ void Config::print() const {
     cout << "Type de test: " << testType << endl;
     cout << "Fichier de maillage: " << meshFile << endl;
     cout << "\nMatériau 1 (matrice):" << endl;
-    cout << "  Module de Young: " << E << " Pa" << endl;
-    cout << "  Coefficient de Poisson: " << nu << endl;
-    cout << "  Densité: " << rho << " kg/m³" << endl;
+    cout << " E = " << E << " Pa," << " nu = " << nu << ", rho = " << rho << " kg/m³" << endl;
     
     if (hasFiber) {
         cout << "\nMatériau 2 (fibre):" << endl;
-        cout << "  Module de Young: " << E_fiber << " Pa" << endl;
-        cout << "  Coefficient de Poisson: " << nu_fiber << endl;
-        cout << "  Densité: " << rho_fiber << " kg/m³" << endl;
+        cout << "E = " << E_fiber << " Pa," << " nu = " << nu_fiber << ", rho = " << rho_fiber << " kg/m³" << endl;
     }
     
-    cout << "\nForce appliquée: " << forceValue << " N" << endl;
-    cout << "Répertoire de sortie: " << outputDir << endl;
-    cout << "Préfixe de sortie: " << outputFilePrefix << endl;
-    cout << endl;
+    cout << "\nForce appliquée: " << forceValue << " N" << endl;    cout << "Facteur d'échelle des dimensions: " << dimensionScale << " m/unité" << endl;    cout << endl;
 }

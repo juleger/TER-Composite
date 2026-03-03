@@ -1,0 +1,19 @@
+# Configuration pour test de flexion
+# Force ponctuelle sur poutre encastrée
+
+test_type = flexion
+
+# Fichier de maillage
+mesh_file = mesh/rectangle2.msh
+
+# Matériau: Acier
+Young_modulus = 200.0e9
+Poisson_ratio = 0.3
+density = 7850.0
+
+# Force ponctuell
+force_value = -1.0e6
+
+# Fichiers de sortie
+output_dir = results
+output_prefix = flexion

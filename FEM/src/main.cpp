@@ -7,7 +7,7 @@ using namespace std;
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         cerr << "Usage: " << argv[0] << " <config_file.txt>" << endl;
-        cerr << "  Exemple: " << argv[0] << " ../config/traction_config.txt" << endl;
+        cerr << "  Exemple: " << argv[0] << " config/traction_config.txt" << endl;
         return 1;
     }
     

@@ -27,7 +27,7 @@ class Solver {
         std::map<int, double> _neumannBCs; // globalDof -> applied force
         
     public:
-        Solver(Mesh& mesh, double tolerance = 1e-6, int maxIterations = 1000);
+        Solver(Mesh& mesh, double tolerance = 1e-4, int maxIterations = 500);
 
         void assemble();
         void applyBC();

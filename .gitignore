@@ -6,3 +6,5 @@ CMakeFiles/
 results/
 build/
 .vscode/
+*.cmake
+rapport/
