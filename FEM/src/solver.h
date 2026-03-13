@@ -9,7 +9,6 @@
 #include "mesh.h"
 #include "material.h"
 
-// (x, y) → (ux_exact, uy_exact)
 using ExactFn = std::function<Eigen::Vector2d(double, double)>;
 
 class Solver {
@@ -38,14 +37,13 @@ public:
     double U(int nodeId, int dof) const { return _U(2*(nodeId-1) + dof); }
     double F(int nodeId, int dof) const { return _F(2*(nodeId-1) + dof); }
 
-    // Compute ||u_h - u_exact||_L2 and store in errL2 / errL2_rel
     void computeL2Error(ExactFn exact);
 
     void saveResults(const std::string& filename) const;
     void saveVTK(const std::string& filename);
 
-    double errL2    = 0.0;   // absolute L2 error [m]
-    double errL2_rel = 0.0;  // relative L2 error (normalised by ||u_exact||_L2)
+    double errL2    = 0.0;
+    double errL2_rel = 0.0;
 
 private:
     Mesh& _mesh;
@@ -53,7 +51,7 @@ private:
     Eigen::SparseMatrix<double> _K;
     Eigen::VectorXd _F;
     Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper,
-                              Eigen::DiagonalPreconditioner<double>> _cgSolver;
+        Eigen::IncompleteCholesky<double>> _cgSolver;
     Eigen::MatrixXd _stress;
     Eigen::MatrixXd _strain;
     double _tol;

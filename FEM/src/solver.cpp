@@ -16,6 +16,7 @@ Solver::Solver(Mesh& mesh, double tolerance, int maxIterations)
     _F.resize(nbDofs), _F.setZero();
     _K.resize(nbDofs, nbDofs);
     Eigen::initParallel();
+    cout << "Threads Eigen : " << Eigen::nbThreads() << endl;
 }
 
 void Solver::setDirichletBC(int nodeId, int dof, double value) {
@@ -109,7 +110,6 @@ void Solver::solveConjugateGradient() {
 
     // Eigen parallélise les opérations internes (SpMV, dot, axpy) via OpenMP
     Eigen::setNbThreads(omp_get_max_threads());
-    cout << "  Threads Eigen : " << Eigen::nbThreads() << endl;
 
     _cgSolver.setTolerance(_tol);
     _cgSolver.setMaxIterations(_maxIter);
@@ -150,8 +150,8 @@ void Solver::computeStrainStress() {
         VectorXd ue(2*n);
         for (int j = 0; j < n; j++) {
             int nid = elem->nodeIds[j];
-            ue(2*j)   = _U(2*(nid-1));
-            ue(2*j+1) = _U(2*(nid-1)+1);
+            ue(2*j)   = U(nid, 0);
+            ue(2*j+1) = U(nid, 1);
         }
         _strain.row(i) = elem->B * ue;
         _stress.row(i) = elem->material->C * _strain.row(i).transpose();
@@ -169,8 +169,8 @@ void Solver::saveResults(const string& filename) const {
     file << "# NodeID X Y Ux Uy Unorm\n";
     
     for (const auto& node : _mesh.nodes) {
-        double ux = _U(2*(node.id-1));
-        double uy = _U(2*(node.id-1)+1);
+        double ux = U(node.id, 0);
+        double uy = U(node.id, 1);
         double unorm = sqrt(ux*ux + uy*uy);
         file << node.id << " " << node.coords.x() << " " << node.coords.y() 
              << " " << ux << " " << uy << " " << unorm << "\n";
@@ -246,28 +246,28 @@ void Solver::saveVTK(const string& filename) {
 
     file << "VECTORS U double\n";
     for (const auto& node : _mesh.nodes)
-        file << _U(2*(node.id-1)) << " " << _U(2*(node.id-1)+1) << " 0.0\n";
+        file << U(node.id, 0) << " " << U(node.id, 1) << " 0.0\n";
     file << "\n";
 
-    file << "SCALARS U_norm double 1\nLOOKUP_TABLE default\n";
-    for (const auto& node : _mesh.nodes) {
-        double ux = _U(2*(node.id-1)), uy = _U(2*(node.id-1)+1);
-        file << sqrt(ux*ux + uy*uy) << "\n";
+    // Notation de Voigt explicite: [xx, yy, xy]
+    file << "FIELD FieldData 2\n";
+
+    file << "sigma_voigt 3 " << _mesh.nbNodes() << " double\n";
+    for (int i = 0; i < _mesh.nbNodes(); ++i) {
+        const double sxx = nodalStress[i](0);
+        const double syy = nodalStress[i](1);
+        const double sxy = nodalStress[i](2);
+        file << sxx << " " << syy << " " << sxy << "\n";
+    }
+
+    file << "eps_voigt 3 " << _mesh.nbNodes() << " double\n";
+    for (int i = 0; i < _mesh.nbNodes(); ++i) {
+        const double exx = nodalStrain[i](0);
+        const double eyy = nodalStrain[i](1);
+        const double exy = nodalStrain[i](2);
+        file << exx << " " << eyy << " " << exy << "\n";
     }
     file << "\n";
-
-    auto writeScalarPoint = [&](const string& name, auto fn) {
-        file << "SCALARS " << name << " double 1\nLOOKUP_TABLE default\n";
-        for (int i = 0; i < _mesh.nbNodes(); i++) file << fn(i) << "\n";
-        file << "\n";
-    };
-
-    writeScalarPoint("sigma_xx", [&](int i){ return nodalStress[i](0); });
-    writeScalarPoint("sigma_yy", [&](int i){ return nodalStress[i](1); });
-    writeScalarPoint("sigma_xy", [&](int i){ return nodalStress[i](2); });
-    writeScalarPoint("eps_xx",   [&](int i){ return nodalStrain[i](0); });
-    writeScalarPoint("eps_yy",   [&](int i){ return nodalStrain[i](1); });
-    writeScalarPoint("eps_xy",   [&](int i){ return nodalStrain[i](2); });
 
     file.close();
     cout << "Fichier VTK sauvegardé: " << filename << endl;
@@ -291,8 +291,8 @@ void Solver::computeL2Error(ExactFn exact) {
         for (int i = 0; i < elem->nNodes(); i++) {
             cx += N(i) * elem->nodes[i]->coords.x();
             cy += N(i) * elem->nodes[i]->coords.y();
-            ux += N(i) * _U(2*(elem->nodeIds[i]-1));
-            uy += N(i) * _U(2*(elem->nodeIds[i]-1)+1);
+            ux += N(i) * U(elem->nodeIds[i], 0);
+            uy += N(i) * U(elem->nodeIds[i], 1);
         }
 
         Eigen::Vector2d uex = exact(cx, cy);

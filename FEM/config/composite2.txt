@@ -5,7 +5,7 @@ test_type = composite
 
 element_type = Q1
 # Fichier de maillage
-mesh_file = ../IBM/composite3.msh
+mesh_file = ../IBM/composite4.msh
 
 dimension_scale = 1
 Young_modulus = 3e9
@@ -16,11 +16,11 @@ Young_modulus_fiber = 228e9
 Poisson_ratio_fiber = 0.2
 density_fiber = 1800   
 
-Young_modulus_pore = 1e6
-Poisson_ratio_pore = 0.2
+#Young_modulus_pore = 30e9
+#Poisson_ratio_pore = 0.41
 density_pore = 10
 # Chargement
-force_value = 1000         # Force en N
+force_value = 1e3         # Force en N
 
 # Sortie
 output_dir = results

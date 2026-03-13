@@ -223,21 +223,16 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     mesh.initializeElements();
     mesh.computeGeometry();
     mesh.scaleCoordinates();  // Appliquer le facteur d'échelle
-    
-    cout << "Noeuds: " << mesh.nbNodes() << ", Eléments: " << mesh.nbElements() << endl;
-    cout << "Dimensions: " << mesh.width() << " x " << mesh.height() << " m\n" << endl;
-    
     double V_fiber = mesh.computeVolumeFraction(&fiber);
     double V_pore = config.hasPores ? mesh.computeVolumeFraction(&pore) : 0.0;
     double V_matrix = max(0.0, 1.0 - V_fiber - V_pore);
 
     // Résolution
-    Solver solver(mesh, 1e-6, 2000);
+    Solver solver(mesh, 1e-6, 5000);
     solver.assemble();
     
     // Conditions aux limites: encastrement à gauche, force à droite
-    for (int id : mesh.leftNodes) solver.setDirichletBC(id, 0, 0.0);
-    for (int id : mesh.findNodesAtY(mesh.yMax / 2.0)) solver.setDirichletBC(id, 1, 0.0);
+    for (int id : mesh.leftNodes) solver.setDirichletBC(id, 0, 0.0), solver.setDirichletBC(id, 1, 0.0);
     
     // Force répartie à droite
     double totalForce = config.forceValue;
@@ -245,7 +240,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     
     solver.applyBC();
     solver.solveConjugateGradient();
-    solver.saveVTK(config.outputFilePrefix + ".vtk");
+    solver.saveVTK(config.outputDir + "/" + config.outputFilePrefix + ".vtk");
     
     // Résultats
     Eigen::VectorXd U = solver.getU();
@@ -298,6 +293,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     // Encastrement en bas, force en haut
     for (int id : mesh.bottomNodes) {
         solver.setDirichletBC(id, 0, 0.0);
+        solver.setDirichletBC(id, 1, 0.0);
     }
     for (int id : mesh.findNodesAtX(mesh.xMax / 2.0)) {
         solver.setDirichletBC(id, 1, 0.0);
@@ -306,7 +302,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     applyDistributedForce(solver, mesh, mesh.topNodes, totalForce, 1);
     solver.applyBC();
     solver.solveConjugateGradient();
-
+    solver.assemble();  // Re-assembler pour calculer les contraintes à partir des déplacements
     // Calcul de E2 et v21
     U = solver.getU();
     double uy_y = calcDisp(mesh.topNodes, 1);

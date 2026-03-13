@@ -70,6 +70,7 @@ void Mesh::computeGeometry() {
 
     cout << "Dimensions: " << width() << " x " << height() << " m\n" << endl;
     
+    cout << "Noeuds: " << nbNodes() << ", Eléments: " << nbElements() << endl;
 }
 
 vector<int> Mesh::findNodesAtY(double y, double tol) const {
