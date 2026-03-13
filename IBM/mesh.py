@@ -7,11 +7,17 @@ PHYS = {0: 1, 1: 2, 2: 3}
 NAMES = {1: "Matrix", 2: "Fiber", 3: "Pore"}
 
 
-def clean_mask(seg, min_size=200):
+def clean_mask(seg, min_size=400):
     for label in (1, 2):
         mask = seg == label
-        mask = morphology.remove_small_objects(mask, min_size=min_size)
-        mask = morphology.remove_small_holes(mask, area_threshold=min_size)
+        if label == 1:
+            # Fibre -> La taille caractéristique est plus grande, on enlève les petits objets et les petits trous
+            mask = morphology.remove_small_objects(mask, min_size=min_size)
+            mask = morphology.remove_small_holes(mask, area_threshold=min_size)
+            mask = morphology.binary_opening(mask, morphology.disk(4))
+        else:
+            mask = morphology.remove_small_objects(mask, min_size=min_size // 2)
+            mask = morphology.remove_small_holes(mask, area_threshold=min_size // 2)
         seg[seg == label] = 0
         seg[mask] = label
 
