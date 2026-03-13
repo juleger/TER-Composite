@@ -8,3 +8,11 @@ build/
 .vscode/
 *.cmake
 rapport/
+*.aux
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.log
+*.out
+*.toc
+CMakeCache.txt
