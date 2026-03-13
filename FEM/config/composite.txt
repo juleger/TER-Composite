@@ -1,24 +1,25 @@
-# Configuration pour maillage généré automatiquement depuis images
-# Composite multi-fibres détectées depuis images microscope
+# Configuration pour test composite C/C (Carbone/Carbone)
+# Carré avec fibre carbone au centre dans matrice carbone - test de traction
 
 test_type = composite
 
-# Fichier de maillage généré depuis detection
-mesh_file = mesh/maillage_fibres.msh
+element_type = P1
+# Fichier de maillage
+mesh_file = mesh/composite_simple.msh
 
-dimension_scale = 7e-8
-Young_modulus = 215
+dimension_scale = 1
+Young_modulus = 3e9
 Poisson_ratio = 0.41
-density = 1800             # kg/m³
+density = 1300             # kg/m³
 
 # Matériau 2: Fibre verre
-Young_modulus_fiber = 228 
+Young_modulus_fiber = 228e9
 Poisson_ratio_fiber = 0.2
-density_fiber = 1800        # kg/m³
+density_fiber = 1800   
 
-# Chargement (traction)
+# Chargement
 force_value = 1000         # Force en N
 
 # Sortie
 output_dir = results
-output_prefix = fibres_reelles
+output_prefix = composite

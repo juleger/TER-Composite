@@ -4,8 +4,8 @@
 test_type = flexion
 
 # Fichier de maillage
-mesh_file = mesh/rectangle2.msh
-
+mesh_file = mesh/rectangle2_P2.msh
+element_type = P2
 # Matériau: Acier
 Young_modulus = 200.0e9
 Poisson_ratio = 0.3
