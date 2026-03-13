@@ -15,4 +15,5 @@ rapport/
 *.log
 *.out
 *.toc
+*.vtk
 CMakeCache.txt
