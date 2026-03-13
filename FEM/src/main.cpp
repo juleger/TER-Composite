@@ -1,5 +1,5 @@
-#include "Config.h"
-#include "Tests.h"
+#include "config.h"
+#include "tests.h"
 #include <iostream>
 
 using namespace std;
