@@ -1,9 +1,8 @@
-// Rectangle simple pour test de traction
-// Dimensions: 10 x 2 (L x H)
+// Rectangle simple pour tests
 
-L = 10.0;
-H = 2.0;
-lc = 0.125;  // taille de maille
+L = 1.0;
+H = 1.0;
+lc = 0.003125;  // taille de maille
 
 // Points
 Point(1) = {0, 0, 0, lc};
