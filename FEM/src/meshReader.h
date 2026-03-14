@@ -27,8 +27,6 @@ private:
     // Méthodes privées pour la lecture
     void readNodes(std::ifstream& file);
     void readElements(std::ifstream& file);
-    void printStatistics() const;
-    
 public:
     MeshReader(Mesh* m);
     

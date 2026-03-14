@@ -1,0 +1,19 @@
+# Configuration simple shear (square)
+test_type = shear
+mesh_file = mesh/square/square_lc0.05.msh
+element_type = P1
+E = 200.0e9
+nu = 0.3
+rho = 7850.0
+F = 1.0e6
+output_vtk = shear_square.vtk
+
+# Solveur
+precond = ic
+tol = 1e-8
+maxIter = 2000
+
+# Série de maillages pour convergence
+mesh_base_dir = mesh/square
+mesh_prefix = square_lc
+mesh_lc = 0.05,0.025,0.0125,0.00625

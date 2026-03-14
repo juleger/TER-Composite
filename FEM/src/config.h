@@ -3,8 +3,10 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 enum class ElementType { P1, P2, Q1 };
+class Solver;
 
 class Config {
 public:
@@ -35,20 +37,36 @@ public:
 
 
     double forceValue;  // Valeur de la force (N)
+
+    // Paramètres solveur
+    std::string preconditioner;  // ic, ilu, diag...
+    double solverTolerance;
+    int solverMaxIter;
+
+    // Paramètres de série de maillages (convergence)
+    std::string meshBaseDir;
+    std::string meshPrefix;
+    std::string meshSuffix;
+    std::vector<std::string> meshLcTokens;
     
-    // Fichiers de sortie
-    std::string outputDir;
-    std::string outputFilePrefix;
+    // Fichier de sortie VTK (nom de fichier uniquement, dossier forcé à results/)
+    std::string outputVtk;
     
     Config();
     void loadFromFile(const std::string& filename);
     void print() const;
+    std::string vtkPath(const std::string& meshFile) const;
+    void buildConvergenceMeshes(std::vector<std::string>& meshFiles,
+                                std::vector<double>& meshLc) const;
 
 private:
     std::map<std::string, std::string> params;
     void parseFile(const std::string& filename);
     double getDouble(const std::string& key, double defaultValue) const;
     std::string getString(const std::string& key, const std::string& defaultValue) const;
+    std::vector<std::string> splitList(const std::string& raw) const;
 };
+
+void applySolverConfig(Solver& solver, const Config& config);
 
 #endif

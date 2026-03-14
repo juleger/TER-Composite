@@ -1,6 +1,7 @@
 #include "config.h"
 #include "tests.h"
 #include <iostream>
+#include <vector>
 
 using namespace std;
 
@@ -19,12 +20,23 @@ int main(int argc, char* argv[]) {
     config.print();
     
     // Exécuter le test approprié
-    if (config.testType == "flexion") {
-        runFlexionTest(config.meshFile, config);
-    } else if (config.testType == "composite") {
+    if (config.testType == "composite") {
         runCompositeTest(config.meshFile, config);
+    } else if (config.testType == "flexion") {
+        vector<double> meshLc;
+        vector<string> meshFiles;
+        config.buildConvergenceMeshes(meshFiles, meshLc);
+        runFlexionTest(meshFiles, meshLc, config);
+    } else if (config.testType == "shear") {
+        vector<double> meshLc;
+        vector<string> meshFiles;
+        config.buildConvergenceMeshes(meshFiles, meshLc);
+        runShearTest(meshFiles, meshLc, config);
     } else {
-        runTractionTest(config.meshFile, config);
+        vector<double> meshLc;
+        vector<string> meshFiles;
+        config.buildConvergenceMeshes(meshFiles, meshLc);
+        runTractionTest(meshFiles, meshLc, config);
     }
     
     return 0;

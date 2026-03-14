@@ -1,19 +1,21 @@
 # Configuration pour test de flexion
-# Force ponctuelle sur poutre encastrée
 
 test_type = flexion
-
-# Fichier de maillage
 mesh_file = mesh/rectangle2_P2.msh
-element_type = P2
-# Matériau: Acier
-Young_modulus = 200.0e9
-Poisson_ratio = 0.3
-density = 7850.0
+element_type = P1
+E = 200.0e9 #Acier
+nu = 0.3
+rho = 7850.0
 
 # Force ponctuell
-force_value = -1.0e6
+F = -1.0e6
 
-# Fichiers de sortie
-output_dir = results
-output_prefix = flexion
+# Solveur
+precond = ic
+tol = 1e-8
+maxIter = 2000
+
+# Série de maillages pour convergence
+mesh_base_dir = mesh/beam
+mesh_prefix = beam_lc
+mesh_lc = 0.1,0.05,0.025,0.0125,0.00625,0.003125

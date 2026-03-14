@@ -28,6 +28,7 @@ public:
     double height()  const { return yMax - yMin; }
 
     double computeVolumeFraction(Material* mat) const;
+    double computeCharacteristicLength() const;
 
     void loadFromGmsh(const std::string& filename);
     void initializeElements();

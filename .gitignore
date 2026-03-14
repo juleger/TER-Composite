@@ -17,3 +17,4 @@ rapport/
 *.toc
 *.vtk
 CMakeCache.txt
+__pycache__/

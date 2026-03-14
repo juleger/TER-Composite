@@ -5,23 +5,25 @@ test_type = composite
 
 element_type = Q1
 # Fichier de maillage
-mesh_file = ../IBM/composite4.msh
+mesh_file = mesh/composite_quad.msh
 
 dimension_scale = 1
-Young_modulus = 3e9
-Poisson_ratio = 0.41
-density = 1300             # kg/m³
+E = 3e9
+nu = 0.41
+rho = 1300             # kg/m³
 
-Young_modulus_fiber = 228e9
-Poisson_ratio_fiber = 0.2
-density_fiber = 1800   
+E_fiber = 228e9
+nu_fiber = 0.2
+rho_fiber = 1800   
 
-#Young_modulus_pore = 30e9
-#Poisson_ratio_pore = 0.41
-density_pore = 10
+E_pore = 3e7
+nu_pore = 0.1
+rho_pore = 10
+
 # Chargement
-force_value = 1e3         # Force en N
+F = 1e3         # Force en N
 
-# Sortie
-output_dir = results
-output_prefix = composite
+# Solveur
+precond = ic
+tol = 1e-4
+maxIter = 3000

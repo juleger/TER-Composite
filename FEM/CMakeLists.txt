@@ -16,7 +16,20 @@ if(NOT Eigen3_FOUND)
 endif()
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-set(SOURCES src/element.cpp src/material.cpp src/mesh.cpp src/solver.cpp src/main.cpp src/meshReader.cpp src/config.cpp src/tests.cpp)
+set(SOURCES
+    src/element.cpp
+    src/material.cpp
+    src/mesh.cpp
+    src/solver.cpp
+    src/main.cpp
+    src/meshReader.cpp
+    src/config.cpp
+    src/tests_utils.cpp
+    src/test_traction.cpp
+    src/test_flexion.cpp
+    src/test_shear.cpp
+    src/test_composite.cpp
+)
 
 add_executable(run ${SOURCES})
 if(Eigen3_FOUND)

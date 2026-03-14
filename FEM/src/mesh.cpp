@@ -68,9 +68,8 @@ void Mesh::computeGeometry() {
         if (abs(node.coords.y() - yMax) < 1e-6) topNodes.push_back(node.id);
     }
 
-    cout << "Dimensions: " << width() << " x " << height() << " m\n" << endl;
-    
-    cout << "Noeuds: " << nbNodes() << ", Eléments: " << nbElements() << endl;
+    cout << "\n" << string(20, '-') << "\n";
+    cout << "Maillage : " << nbNodes() << " noeuds, " << nbElements() << " éléments (" << width() << "m x " << height() << "m)" << endl;
 }
 
 vector<int> Mesh::findNodesAtY(double y, double tol) const {
@@ -102,6 +101,14 @@ double Mesh::computeVolumeFraction(Material* mat) const {
         if (elem->material == mat) matArea += elem->area;
     }
     return matArea / totalArea;
+}
+
+double Mesh::computeCharacteristicLength() const {
+    if (elements.empty()) return 0.0;
+    double sumArea = 0.0;
+    for (const auto& e : elements)
+        sumArea += e->area;
+    return std::sqrt(sumArea / elements.size());
 }
 
 void Mesh::scaleCoordinates() {

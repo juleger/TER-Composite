@@ -44,24 +44,21 @@ MatrixXd Element::buildB(const VectorXd& dNdx, const VectorXd& dNdy) const {
 // P1 : triangle linéaire
 
 void ElementP1::compute() {
-    const Vector2d& p1 = nodes[0]->coords;
-    const Vector2d& p2 = nodes[1]->coords;
-    const Vector2d& p3 = nodes[2]->coords;
+    // Triangle de référence: N1=1-xi-eta, N2=xi, N3=eta
+    VectorXd dNdxi(3), dNdeta(3);
+    dNdxi  << -1.0, 1.0, 0.0;
+    dNdeta << -1.0, 0.0, 1.0;
 
-    double signedArea = 0.5 * ((p2.x()-p1.x())*(p3.y()-p1.y())
-                             - (p3.x()-p1.x())*(p2.y()-p1.y()));
-    area = abs(signedArea);
+    Matrix2d J, invJ;
+    double detJ;
+    computeJacobian(dNdxi, dNdeta, J, invJ, detJ);
 
-    double b1 = p2.y()-p3.y(), b2 = p3.y()-p1.y(), b3 = p1.y()-p2.y();
-    double c1 = p3.x()-p2.x(), c2 = p1.x()-p3.x(), c3 = p2.x()-p1.x();
+    VectorXd dNdx = invJ(0,0) * dNdxi + invJ(0,1) * dNdeta;
+    VectorXd dNdy = invJ(1,0) * dNdxi + invJ(1,1) * dNdeta;
 
-    B.resize(3, 6);
-    B << b1,  0, b2,  0, b3,  0,
-          0, c1,  0, c2,  0, c3,
-         c1, b1, c2, b2, c3, b3;
-    B /= (2.0 * signedArea);
-
-    Ke = B.transpose() * material->C * B * area;
+    B = buildB(dNdx, dNdy);
+    area = 0.5 * abs(detJ);
+    Ke = B.transpose() * material->D * B * area;
 }
 
 // P2 : triangle quadratique 6 noeuds
@@ -90,7 +87,7 @@ void ElementP2::compute() {
         VectorXd dNdx = invJ(0,0)*dNdxi + invJ(0,1)*dNdeta;
         VectorXd dNdy = invJ(1,0)*dNdxi + invJ(1,1)*dNdeta;
         MatrixXd Bg   = buildB(dNdx, dNdy);
-        Ke   += gw * Bg.transpose() * material->C * Bg * abs(detJ);
+        Ke   += gw * Bg.transpose() * material->D * Bg * abs(detJ);
         area += gw * abs(detJ);
     }
 
@@ -124,7 +121,7 @@ void ElementQ1::compute() {
         VectorXd dNdx = invJ(0,0)*dNdxi + invJ(0,1)*dNdeta;
         VectorXd dNdy = invJ(1,0)*dNdxi + invJ(1,1)*dNdeta;
         MatrixXd Bg = buildB(dNdx, dNdy);
-        Ke += Bg.transpose() * material->C * Bg * abs(detJ);  // poids = 1
+        Ke += Bg.transpose() * material->D * Bg * abs(detJ);  // poids = 1
         area += abs(detJ);
     }
 

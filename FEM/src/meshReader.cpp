@@ -52,7 +52,6 @@ void MeshReader::readGmshFile(const string& filename) {
     }
     
     file.close();
-    printStatistics();
 }
 
 void MeshReader::readNodes(ifstream& file) {
@@ -243,10 +242,6 @@ void MeshReader::readElements(ifstream& file) {
     }
     
     getline(file, line);  // $EndElements
-}
-
-void MeshReader::printStatistics() const {
-    // Statistiques simplifiées déjà affichées
 }
 
 const set<Edge>& MeshReader::getEdges() const {

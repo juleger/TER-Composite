@@ -16,7 +16,6 @@ Solver::Solver(Mesh& mesh, double tolerance, int maxIterations)
     _F.resize(nbDofs), _F.setZero();
     _K.resize(nbDofs, nbDofs);
     Eigen::initParallel();
-    cout << "Threads Eigen : " << Eigen::nbThreads() << endl;
 }
 
 void Solver::setDirichletBC(int nodeId, int dof, double value) {
@@ -30,17 +29,18 @@ void Solver::setNeumannBC(int nodeId, int dof, double value) {
 }
 
 void Solver::assemble() {
-    cout << "Assemblage en cours..." << endl;
+    cout << "Assemblage...                         " << flush;
+    auto _t0_assemble = chrono::high_resolution_clock::now();
 
     int nbElements = _mesh.elements.size();
 
-    // Chaque thread accumule ses triplets localement → pas de verrou
+    // Multithreading pour l'assemblage sous OpenMP
     int nbThreads = omp_get_max_threads();
     vector<vector<Triplet<double>>> threadTriplets(nbThreads);
     for (auto& t : threadTriplets)
         t.reserve(nbElements * 144 / nbThreads + 1);
 
-    #pragma omp parallel for schedule(dynamic, 16)
+    #pragma omp parallel for schedule(dynamic)
     for (int e = 0; e < nbElements; e++) {
         const auto& elem = _mesh.elements[e];
         if (elem->Ke.norm() < 1e-20) continue;
@@ -65,12 +65,13 @@ void Solver::assemble() {
         triplets.insert(triplets.end(), t.begin(), t.end());
 
     _K.setFromTriplets(triplets.begin(), triplets.end());
-    cout << "Assemblage terminé : Matrice " << _K.rows() << "x" << _K.cols()
-         << ", nnz = " << _K.nonZeros() << endl;
+    auto _ms_assemble = chrono::duration_cast<chrono::milliseconds>(chrono::high_resolution_clock::now() - _t0_assemble).count();
+    cout << "\rAssemblage... OK  (" << _ms_assemble << " ms)  "
+         << _K.rows() << "x" << _K.cols() << ", nnz=" << _K.nonZeros() << "\n";
 }
 
 void Solver::applyBC() {
-    cout << "Application des conditions aux limites..." << endl;
+    cout << "Conditions aux limites...             " << flush;
     
     // Appliquer les forces (Neumann BC)
     for (const auto& force : _neumannBCs) {
@@ -78,7 +79,19 @@ void Solver::applyBC() {
         double value = force.second;
         _F(dof) += value;
     }
-    // Méthode efficace : ne modifier que les coefficients existants
+    for (const auto& disp : _dirichletBCs) {
+        int dof = disp.first;
+        double value = disp.second;
+        for (int k = 0; k < _K.outerSize(); ++k) {
+            for (SparseMatrix<double>::InnerIterator it(_K, k); it; ++it) {
+                if (it.col() == dof && it.row() != dof) {
+                    _F(it.row()) -= it.value() * value;
+                }
+            }
+        }
+    }
+
+    // Puis imposer la valeur en mettant ligne/colonne à 0 et diagonale à 1.
     for (const auto& disp : _dirichletBCs) {
         int dof = disp.first;
         double value = disp.second;
@@ -100,45 +113,83 @@ void Solver::applyBC() {
         _F(dof) = value;
     }
     
-    cout << "CL : " << _dirichletBCs.size() << " déplacements imposés, " 
-         << _neumannBCs.size() << " forces appliquées" << endl;
+    cout << "\rConditions aux limites... OK  "
+         << _dirichletBCs.size() << " Dirichlet, " << _neumannBCs.size() << " Neumann\n";
 }
 
 void Solver::solveConjugateGradient() {
-    cout << "\n Résolution par gradient conjugué..." << endl;
+    cout << "Résolution (GC)...                    " << flush;
     auto t0 = std::chrono::high_resolution_clock::now();
+    _lastSolveIterations = 0;
+    _lastSolveError = 0.0;
+    _lastSolveTimeSec = 0.0;
 
     // Eigen parallélise les opérations internes (SpMV, dot, axpy) via OpenMP
     Eigen::setNbThreads(omp_get_max_threads());
 
-    _cgSolver.setTolerance(_tol);
-    _cgSolver.setMaxIterations(_maxIter);
-    _cgSolver.compute(_K);
-    
-    if (_cgSolver.info() != Success) {
-        cerr << "Erreur : échec de l'initialisation du gradient conjugué" << endl;
-        return;
-    }
-    _U = _cgSolver.solve(_F);
-    
-    auto t1 = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> elapsed = t1 - t0;
+    auto finalizeAndCheck = [&](int iterations, double error, bool success) {
+        auto t1 = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed = t1 - t0;
+        _lastSolveIterations = iterations;
+        _lastSolveError = error;
+        _lastSolveTimeSec = elapsed.count();
+        if (!success) {
+            cerr << "\nErreur : le gradient conjugué n'a pas convergé" << endl;
+            cerr << "Iterations: " << iterations << ", Résidu: " << error << ", Temps: " << _lastSolveTimeSec << " s" << endl;
+        }
+        return success;
+    };
 
-    if (_cgSolver.info() != Success) {
-        cerr << "Erreur : le gradient conjugué n'a pas convergé" << endl;
-        cerr << "Itérations: " << _cgSolver.iterations() << ", erreur: " << _cgSolver.error() << endl;
-        cerr << "Temps de résolution: " << elapsed.count() << " s" << endl;
-        return;
+    bool success = false;
+    switch (_preconditioner) {
+        case PreconditionerType::Identity: {
+            Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper, Eigen::IdentityPreconditioner> cg;
+            cg.setTolerance(_tol);
+            cg.setMaxIterations(_maxIter);
+            cg.compute(_K);
+            if (cg.info() != Success) {
+                cerr << "\nErreur : échec de l'initialisation du gradient conjugué" << endl;
+                return;
+            }
+            _U = cg.solve(_F);
+            success = finalizeAndCheck(cg.iterations(), cg.error(), cg.info() == Success);
+            break;
+        }
+        case PreconditionerType::Diagonal: {
+            Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper, Eigen::DiagonalPreconditioner<double>> cg;
+            cg.setTolerance(_tol);
+            cg.setMaxIterations(_maxIter);
+            cg.compute(_K);
+            if (cg.info() != Success) {
+                cerr << "\nErreur : échec de l'initialisation du gradient conjugué" << endl;
+                return;
+            }
+            _U = cg.solve(_F);
+            success = finalizeAndCheck(cg.iterations(), cg.error(), cg.info() == Success);
+            break;
+        }
+        case PreconditionerType::IncompleteCholesky:
+        default: {
+            Eigen::ConjugateGradient<Eigen::SparseMatrix<double>, Eigen::Lower|Eigen::Upper, Eigen::IncompleteCholesky<double>> cg;
+            cg.setTolerance(_tol);
+            cg.setMaxIterations(_maxIter);
+            cg.compute(_K);
+            if (cg.info() != Success) {
+                cerr << "\nErreur : échec de l'initialisation du gradient conjugué" << endl;
+                return;
+            }
+            _U = cg.solve(_F);
+            success = finalizeAndCheck(cg.iterations(), cg.error(), cg.info() == Success);
+            break;
+        }
     }
+    if (!success) return;
 
-    // Afficher résumé
-    cout << "\n=== Résolution terminée ===" << endl;
-    cout << "Itérations: " << _cgSolver.iterations() << endl;
-    cout << "Temps: " << elapsed.count() << " s" << endl;
+    cout << "\rRésolution (GC)... OK  " << _lastSolveTimeSec << " s, "
+         << _lastSolveIterations << " iter, résidu = " << _lastSolveError << "\n";
 }
 
 void Solver::computeStrainStress() {
-    cout << "\nCalcul des contraintes et déformations..." << endl;
     int nbElements = _mesh.elements.size();
     _strain.resize(nbElements, 3);
     _stress.resize(nbElements, 3);
@@ -154,7 +205,7 @@ void Solver::computeStrainStress() {
             ue(2*j+1) = U(nid, 1);
         }
         _strain.row(i) = elem->B * ue;
-        _stress.row(i) = elem->material->C * _strain.row(i).transpose();
+        _stress.row(i) = elem->material->D * _strain.row(i).transpose();
     }
 }
 void Solver::saveResults(const string& filename) const {
@@ -250,7 +301,7 @@ void Solver::saveVTK(const string& filename) {
     file << "\n";
 
     // Notation de Voigt explicite: [xx, yy, xy]
-    file << "FIELD FieldData 2\n";
+    file << "FIELD FieldData 3\n";
 
     file << "sigma_voigt 3 " << _mesh.nbNodes() << " double\n";
     for (int i = 0; i < _mesh.nbNodes(); ++i) {
@@ -267,10 +318,19 @@ void Solver::saveVTK(const string& filename) {
         const double exy = nodalStrain[i](2);
         file << exx << " " << eyy << " " << exy << "\n";
     }
+
+    file << "sigma_vm 1 " << _mesh.nbNodes() << " double\n";
+    for (int i = 0; i < _mesh.nbNodes(); ++i) {
+        const double sxx = nodalStress[i](0);
+        const double syy = nodalStress[i](1);
+        const double sxy = nodalStress[i](2);
+        file << std::sqrt(sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy) << "\n";
+    }
+
     file << "\n";
 
     file.close();
-    cout << "Fichier VTK sauvegardé: " << filename << endl;
+    cout << "Fichier VTK sauvegardé : " << filename << endl;
 }
 
 void Solver::Reinitialize() {
@@ -281,6 +341,22 @@ void Solver::Reinitialize() {
     _K.setZero();
     _dirichletBCs.clear();
     _neumannBCs.clear();
+}
+
+double Solver::computeInternalEnergy() {
+    if (_stress.rows() != _mesh.nbElements())
+        computeStrainStress();
+    double W = 0.0;
+    for (int i = 0; i < _mesh.nbElements(); ++i)
+        W += 0.5 * _strain.row(i).dot(_stress.row(i)) * _mesh.elements[i]->area;
+    return W;
+}
+
+double Solver::computeExternalWork() const {
+    double W = 0.0;
+    for (const auto& [dof, force] : _neumannBCs)
+        W += 0.5 * force * _U(dof);
+    return W;
 }
 
 void Solver::computeL2Error(ExactFn exact) {
