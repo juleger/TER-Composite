@@ -1,8 +1,10 @@
-// Rectangle simple pour tests
-
 L = 1.0;
 H = 1.0;
-lc = 0.003125;  // taille de maille
+lc = lc;
+
+// Calcul du nombre d’éléments à partir de lc
+Nx = Ceil(L/lc);
+Ny = Ceil(H/lc);
 
 // Points
 Point(1) = {0, 0, 0, lc};
@@ -21,11 +23,20 @@ Line Loop(1) = {1, 2, 3, 4};
 Plane Surface(1) = {1};
 
 // Tags physiques
-Physical Line("left", 10) = {4};    // Bord gauche (encastré)
-Physical Line("right", 11) = {2};   // Bord droit (traction)
-Physical Line("bottom", 12) = {1};  // Bord bas
-Physical Line("top", 13) = {3};     // Bord haut
-Physical Surface("material", 1) = {1};  // Matériau unique
+Physical Line("left", 10) = {4};
+Physical Line("right", 11) = {2};
+Physical Line("bottom", 12) = {1};
+Physical Line("top", 13) = {3};
+Physical Surface("material", 1) = {1};
 
-// Générer le maillage
+// Maillage structuré régulier à partir de lc
+Transfinite Line {1,3} = Nx + 1 Using Progression 1;
+Transfinite Line {2,4} = Ny + 1 Using Progression 1;
+Transfinite Surface {1};
+Recombine Surface {1};  // quadrangles réguliers
+
+// Ordre des éléments
+Mesh.ElementOrder = 1; // Q1 linéaire, mettre 2 pour Q2
+
+// Générer le maillage 2D
 Mesh 2;

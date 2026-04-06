@@ -10,11 +10,11 @@ void runShearTest(const string& meshFile, const Config& config) {
     runShearTest(vector<string>{meshFile}, vector<double>{1.0}, config);
 }
 
-// TEST CISAILLEMENT - CONVERGENCE MAILLAGE
-void runShearTest(const vector<string>& meshFiles,
-                  const vector<double>& meshLc,
-                  const Config& config) {
-    cout << "-------------- CISAILLEMENT - CONVERGENCE MAILLAGE --------------" << endl;
+// TEST CISAILLEMENT GAUSSIEN - CONVERGENCE MAILLAGE
+// Chargement tangentiel non uniforme sur le bord supérieur
+// Pas de solution analytique fermée 2D: la convergence est suivie via deltaW_rel.
+void runShearTest(const vector<string>& meshFiles, const vector<double>& meshLc, const Config& config) {
+    cout << "---------- CISAILLEMENT GAUSSIEN - CONVERGENCE MAILLAGE ----------" << endl;
 
     Material material(config.E, config.nu, config.rho);
     vector<ConvergenceResult> results = runConvergence(
@@ -27,37 +27,58 @@ void runShearTest(const vector<string>& meshFiles,
             applySolverConfig(solver, config);
             solver.assemble();
 
-            const double gammaTarget = 1.0e-3;
-            applyShearDirichletBC(solver, mesh, gammaTarget);
+            for (int id : mesh.bottomNodes) {
+                solver.setDirichletBC(id, 0, 0.0);
+                solver.setDirichletBC(id, 1, 0.0);
+            }
+
+            const double L     = mesh.width();
+            const double H     = mesh.height();
+            const double xMid  = 0.5 * (mesh.xMin + mesh.xMax);
+            const double sigma = L / 4.0;
+            const double F_tot = config.forceValue;
+
+            const double sq2 = std::sqrt(2.0);
+            const double gaussIntegral = sigma * std::sqrt(2.0 * M_PI) *
+                (std::erf((mesh.xMax - xMid) / (sigma * sq2))
+               - std::erf((mesh.xMin - xMid) / (sigma * sq2))) / 2.0;
+            const double A = F_tot / max(gaussIntegral, 1e-30);
+
+            applyDistributedForce(solver, mesh, mesh.topNodes,
+                [A, xMid, sigma](double x) {
+                    return A * std::exp(-((x - xMid) * (x - xMid)) / (2.0 * sigma * sigma));
+                }, 0);
 
             solver.applyBC();
             solver.solveConjugateGradient();
             solver.computeStrainStress();
             solver.saveVTK(convergenceVtkPath(config, h));
 
-            ExactFn exact = [gammaTarget](double, double y) -> Eigen::Vector2d {
-                return {gammaTarget * y, 0.0};
-            };
-            solver.computeL2Error(exact);
-
             const Eigen::VectorXd U = solver.getU();
-            const double V = max(mesh.width() * mesh.height(), 1e-30);
-            const double Wint = solver.computeInternalEnergy();
-            const double Geff = 2.0 * Wint / max(gammaTarget * gammaTarget * V, 1e-30);
-            const double Gtheo = config.E / (2.0 * (1.0 + config.nu));
-            const double relErrG = abs(Geff - Gtheo) / max(abs(Gtheo), 1e-30);
+            double uxTop = 0.0;
+            for (int id : mesh.topNodes) uxTop += U(2*(id-1));
+            uxTop /= max<double>(mesh.topNodes.size(), 1.0);
+            const double gammaApp = uxTop / max(H, 1e-30);
+            const double tauMean  = F_tot / max(L, 1e-30);
+            const double Gapp     = abs(tauMean) / max(abs(gammaApp), 1e-30);
 
-            const double l2Rel = solver.errL2_rel;
+            const double W_int = solver.computeInternalEnergy();
+            const double W_ext = solver.computeExternalWork();
+            const double deltaWrel = abs(W_int - W_ext) / max(abs(W_int), 1e-30);
 
-            cout << "Wint=" << Wint << ", Geff=" << Geff << ", Gtheo=" << Gtheo << ", errG_rel=" << relErrG << ", L2_rel=" << l2Rel << endl;
-            out = {h, mesh.nbElements(), l2Rel, -1.0, -1.0, -1.0, relErrG};
+            cout << "deltaW_rel=" << deltaWrel << ", G_app=" << Gapp
+                 << ", gamma_app=" << gammaApp << endl;
+
+            out = {h, mesh.nbElements(), -1.0, deltaWrel, -1.0, -1.0, -1.0};
             return true;
         });
 
     ReportOptions reportOpt;
-    reportOpt.showL2 = true;
-    reportOpt.showDeltaW = false;
-    reportOpt.showErrG = true;
-    printConvergenceTable(results, "Shear", reportOpt, [](const ConvergenceResult& r){ return r.L2rel; });
-    exportConvergenceCSV(results, "results/convergence_shear.csv", reportOpt, [](const ConvergenceResult& r){ return r.L2rel; });
+    reportOpt.showL2     = false;
+    reportOpt.showDeltaW = true;
+    reportOpt.showErrG   = false;
+    printConvergenceTable(results, "Cisaillement Gaussien", reportOpt,
+        [](const ConvergenceResult& r){ return r.deltaWrel; });
+    exportConvergenceCSV(results, "results/convergence_shear.csv", reportOpt,
+        [](const ConvergenceResult& r){ return r.deltaWrel; });
 }

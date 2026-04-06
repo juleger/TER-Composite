@@ -2,7 +2,7 @@
 
 test_type = flexion
 mesh_file = mesh/rectangle2_P2.msh
-element_type = P1
+element_type = Q1
 E = 200.0e9 #Acier
 nu = 0.3
 rho = 7850.0
@@ -11,11 +11,11 @@ rho = 7850.0
 F = -1.0e6
 
 # Solveur
-precond = ic
-tol = 1e-8
-maxIter = 2000
+precond = diag
+tol = 1e-12
+maxIter = 5000
 
 # Série de maillages pour convergence
 mesh_base_dir = mesh/beam
-mesh_prefix = beam_lc
-mesh_lc = 0.1,0.05,0.025,0.0125,0.00625,0.003125
+mesh_prefix = beam_Q1_lc
+mesh_lc = 0.1000000, 0.0500000, 0.0250000, 0.0125000, 0.0062500, 0.0031250

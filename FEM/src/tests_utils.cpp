@@ -83,6 +83,8 @@ void applyDistributedForce(Solver& solver, const Mesh& mesh, const vector<int>& 
 
 // Charge un maillage depuis un fichier Gmsh et l'initialise (matériau 1)
 void loadAndInitMesh(const string& meshFile, Material& material, Mesh& mesh) {
+    cout << "\n" << string(80, '-') << "\n";
+    cout << "Fichier maillage : " << meshFile <<  endl;
     MeshReader reader(&mesh);
     reader.setMaterial(1, &material);
     reader.readGmshFile(meshFile);

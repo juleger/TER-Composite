@@ -1,5 +1,8 @@
 #include "config.h"
-#include "tests.h"
+#include "test_traction.h"
+#include "test_flexion.h"
+#include "test_shear.h"
+#include "test_composite.h"
 #include <iostream>
 #include <vector>
 

@@ -2,24 +2,22 @@
 # Force distribuée sur bord droit, encastrement à gauche
 
 test_type = traction
-
-# Fichier de maillage
-mesh_file = mesh/rectangle1.msh
-
+mesh_file = mesh/beam/beam_Q1.msh
+element_type = Q1
 # Matériau: Acier
-E = 200.0e9
+E = 3e11
 nu = 0.3
 rho = 7850.0
 
 # Force totale appliquée (en Newtons)
-F = 1e5
+F = 1e6
 
 # Solveur
-precond = ic
-tol = 1e-8
-maxIter = 2000
+precond = diag
+tol = 1e-16
+maxIter = 5000
 
 # Série de maillages pour convergence
 mesh_base_dir = mesh/square
-mesh_prefix = square_lc
-mesh_lc = 0.1,0.05,0.025,0.0125,0.00625
+mesh_prefix = square_Q1_lc
+mesh_lc = 0.50000000, 0.25000000, 0.12500000, 0.06250000, 0.03125000, 0.01562500, 0.00781250, 0.00390625
