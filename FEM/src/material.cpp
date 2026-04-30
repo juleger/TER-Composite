@@ -98,6 +98,19 @@ void CompositeMaterial::printProperties() const {
     cout << "Bornes G12 (Voigt/Reuss) = " << G12_voigt << " / " << G12_reuss << " Pa" << endl;
 }
 
+Eigen::Matrix3d CompositeMaterial::getRotatedStiffness(double theta_deg) const {
+    double theta = theta_deg * M_PI / 180.0; // En radians
+    double c = cos(theta), s = sin(theta);
+    
+    // Matrice de rotation pour tenseur 2D (transformation des composantes)
+    Eigen::Matrix3d R;
+    R << c*c, s*s, 2*c*s,
+         s*s, c*c, -2*c*s,
+         -c*s, c*s, c*c - s*s;
+    
+    return R * C * R.transpose();
+}
+
 void CompositeMaterial::buildMatrixes() {
     S(0, 0) = 1.0 / max(E1, 1e-30), S(0, 1) = -v12 / max(E1, 1e-30), S(0, 2) = 0.0;
     S(1, 0) = -v21 / max(E2, 1e-30), S(1, 1) = 1.0 / max(E2, 1e-30), S(1, 2) = 0.0;

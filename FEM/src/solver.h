@@ -47,8 +47,10 @@ public:
     double F(int nodeId, int dof) const { return _F(2*(nodeId-1) + dof); }
 
     void computeL2Error(ExactFn exact);
-    double computeInternalEnergy();
+    double computeInternalEnergy() const;
     double computeExternalWork() const;
+    // Critère de rupture Tsai-Hill pour composites orthotropes
+    double computeTsaiHill(int elemId, double Xt, double Yt, double S) const;
     int getLastSolveIterations() const { return _lastSolveIterations; }
     double getLastSolveError() const { return _lastSolveError; }
     double getLastSolveTimeSec() const { return _lastSolveTimeSec; }

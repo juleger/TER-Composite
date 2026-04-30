@@ -343,9 +343,9 @@ void Solver::Reinitialize() {
     _neumannBCs.clear();
 }
 
-double Solver::computeInternalEnergy() {
+double Solver::computeInternalEnergy() const {
     if (_stress.rows() != _mesh.nbElements())
-        computeStrainStress();
+        const_cast<Solver*>(this)->computeStrainStress();
     double W = 0.0;
     for (int i = 0; i < _mesh.nbElements(); ++i)
         W += 0.5 * _strain.row(i).dot(_stress.row(i)) * _mesh.elements[i]->area;
@@ -357,6 +357,17 @@ double Solver::computeExternalWork() const {
     for (const auto& [dof, force] : _neumannBCs)
         W += 0.5 * force * _U(dof);
     return W;
+}
+
+double Solver::computeTsaiHill(int elemId, double Xt, double Yt, double S) const {
+    if (elemId < 0 || elemId >= _stress.rows()) return -1.0; // Erreur
+    Eigen::Vector3d sigma = _stress.row(elemId);
+    double sigma1 = sigma(0); // σ_xx (direction fibres)
+    double sigma2 = sigma(1); // σ_yy (transverse)
+    double tau12 = sigma(2);  // τ_xy
+    // Critère Tsai-Hill : (σ1/Xt)^2 + (σ2/Yt)^2 + (τ12/S)^2 - σ1*σ2/Xt^2 <= 1
+    double criterion = (sigma1/Xt)*(sigma1/Xt) + (sigma2/Yt)*(sigma2/Yt) + (tau12/S)*(tau12/S) - sigma1*sigma2/(Xt*Xt);
+    return criterion;
 }
 
 void Solver::computeL2Error(ExactFn exact) {

@@ -2,15 +2,14 @@
 #include <cmath>
 #include <iostream>
 
-using namespace std;
 using namespace Eigen;
 
 // Classe de base des différents types d'éléments (P1, P2, Q1, etc.)
 
-Element::Element(int elemId, const vector<int>& nIds, Material* mat)
+Element::Element(int elemId, const std::vector<int>& nIds, Material* mat)
     : id(elemId), nodeIds(nIds), material(mat) {}
 
-void Element::linkNodes(const vector<Node>& allNodes) {
+void Element::linkNodes(const std::vector<Node>& allNodes) {
     nodes.clear();
     nodes.reserve(nodeIds.size());
     for (int nid : nodeIds)
@@ -135,11 +134,11 @@ void ElementQ1::compute() {
                invJ(1,0)*dNdxi + invJ(1,1)*dNdeta);
 }
 
-unique_ptr<Element> makeElement(int gmshType, int id, const vector<int>& nIds, Material* mat) {
+std::unique_ptr<Element> makeElement(int gmshType, int id, const std::vector<int>& nIds, Material* mat) {
     switch (gmshType) {
-        case 2: return make_unique<ElementP1>(id, nIds, mat);
-        case 9: return make_unique<ElementP2>(id, nIds, mat);
-        case 3: return make_unique<ElementQ1>(id, nIds, mat);
+        case 2: return std::make_unique<ElementP1>(id, nIds, mat);
+        case 9: return std::make_unique<ElementP2>(id, nIds, mat);
+        case 3: return std::make_unique<ElementQ1>(id, nIds, mat);
         default: return nullptr;
     }
 }

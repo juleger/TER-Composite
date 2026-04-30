@@ -52,6 +52,18 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     solver.computeStrainStress();
     solver.saveVTK("results/composite_traction_x.vtk");
     
+    // Calcul critère de rupture Tsai-Hill (valeurs fictives pour exemple)
+    double Xt = 1000e6; // Résistance traction fibres (Pa)
+    double Yt = 50e6;   // Résistance transverse
+    double S = 30e6;    // Résistance cisaillement
+    std::vector<double> failureIndex(mesh.nbElements());
+    double maxFailure = 0.0;
+    for (int i = 0; i < mesh.nbElements(); ++i) {
+        failureIndex[i] = solver.computeTsaiHill(i, Xt, Yt, S);
+        if (failureIndex[i] > maxFailure) maxFailure = failureIndex[i];
+    }
+    cout << "Critère de rupture max : " << maxFailure << " (rupture si >1)" << endl;
+    
     Eigen::VectorXd U = solver.getU();
     auto calcDisp = [&](const vector<int>& nodes, int dof) {
         double sum = 0.0;
