@@ -17,6 +17,7 @@ struct ConvergenceResult {
 	double errErel = -1.0;
 	double errNurel = -1.0;
 	double errGrel = -1.0;
+	double tcpu = 0.0;
 };
 
 struct ReportOptions {
@@ -42,9 +43,13 @@ void exportConvergenceCSV(const std::vector<ConvergenceResult>& results, const s
                           const ReportOptions& opt,
                           const std::function<double(const ConvergenceResult&)>& orderMetric);
 
+void exportCompositePropertiesCSV(const CompositeMaterial& comp, const std::string& path, double h, double tcpumax);
+
 std::string convergenceVtkPath(const Config& config, double lc);
 
 void applyShearDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget);
+
+void applyShearTransverseDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget);
 
 std::vector<ConvergenceResult> runConvergence(
     const std::vector<std::string>& meshFiles,

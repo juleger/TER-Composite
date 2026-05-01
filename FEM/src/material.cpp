@@ -99,7 +99,7 @@ void CompositeMaterial::printProperties() const {
 }
 
 Eigen::Matrix3d CompositeMaterial::getRotatedStiffness(double theta_deg) const {
-    double theta = theta_deg * M_PI / 180.0; // En radians
+    double theta = theta_deg * M_PI / 180.0;
     double c = cos(theta), s = sin(theta);
     
     // Matrice de rotation pour tenseur 2D (transformation des composantes)

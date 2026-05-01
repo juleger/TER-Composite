@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <Eigen/Dense>
+#include <chrono>
 
 using namespace std;
 
@@ -44,7 +45,10 @@ void runFlexionTest(const vector<string>& meshFiles, const vector<double>& meshL
                 }, 1);
 
             solver.applyBC();
+            auto start = chrono::high_resolution_clock::now();
             solver.solveConjugateGradient();
+            auto end = chrono::high_resolution_clock::now();
+            double tcpu = chrono::duration<double>(end - start).count();
             solver.computeStrainStress();
             solver.saveVTK(convergenceVtkPath(config, h));
 
@@ -70,7 +74,7 @@ void runFlexionTest(const vector<string>& meshFiles, const vector<double>& meshL
             cout << "  dW_rel=" << deltaWrel
                  << ", L2_rel=" << solver.errL2_rel << endl;
 
-            out = {h, mesh.nbElements(), solver.errL2_rel, deltaWrel};
+            out = {h, mesh.nbElements(), solver.errL2_rel, deltaWrel, -1.0, -1.0, -1.0, tcpu};
             return true;
         });
 
@@ -78,9 +82,9 @@ void runFlexionTest(const vector<string>& meshFiles, const vector<double>& meshL
     reportOpt.showL2     = true;
     reportOpt.showDeltaW = true;
     printConvergenceTable(results, "Flexion Lineaire", reportOpt,
-        [](const ConvergenceResult& r){ return r.L2rel; });
+        [](const ConvergenceResult& r){ return r.deltaWrel; });
     exportConvergenceCSV(results, "results/convergence_flexion.csv", reportOpt,
-        [](const ConvergenceResult& r){ return r.L2rel; });
+        [](const ConvergenceResult& r){ return r.deltaWrel; });
 }
 
 void runFlexionTest(const string& meshFile, const Config& config) {

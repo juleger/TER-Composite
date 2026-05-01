@@ -10,15 +10,16 @@ NAMES = {1: "Matrix", 2: "Fiber", 3: "Pore"}
 
 
 def clean_mask(seg, min_size=400):
-    for label in (1, 2):
+    for label in (0, 1, 2):
         mask = seg == label
-        if label == 1:
-            mask = morphology.remove_small_objects(mask, min_size=min_size)
-            mask = morphology.remove_small_holes(mask, area_threshold=min_size)
-            mask = morphology.binary_opening(mask, morphology.disk(4))
+        if label == 2:  # Pore
+            min_sz = min_size // 2
         else:
-            mask = morphology.remove_small_objects(mask, min_size=min_size // 2)
-            mask = morphology.remove_small_holes(mask, area_threshold=min_size // 2)
+            min_sz = min_size
+        mask = morphology.remove_small_objects(mask, min_size=min_sz)
+        mask = morphology.remove_small_holes(mask, area_threshold=min_sz)
+        if label == 1:  # Fiber
+            mask = morphology.binary_opening(mask, morphology.disk(4))
         seg[seg == label] = 0
         seg[mask] = label
 
@@ -50,7 +51,7 @@ def generate_mesh(seg, out, downscale=5, min_size=400, tri=False):
         f.write(f"$Nodes\n{(H + 1) * (W + 1)}\n")
         for i in range(H + 1):
             for j in range(W + 1):
-                f.write(f"{i * (W + 1) + j + 1} {j * ps:.6g} {i * ps:.6g} 0\n")
+                f.write(f"{i * (W + 1) + j + 1} {j * ps:.6g} {(H - i) * ps:.6g} 0\n")
         f.write("$EndNodes\n")
         ne = H * W * (2 if tri else 1)
         f.write(f"$Elements\n{ne}\n")
@@ -74,7 +75,7 @@ def generate_mesh(seg, out, downscale=5, min_size=400, tri=False):
                         f.write(f"{eid} 2 2 {p} {p} {n1} {n2} {n3}\n")
                         eid += 1
                 else:
-                    f.write(f"{eid} 3 2 {p} {p} {n0} {n1} {n2} {n3}\n")
+                    f.write(f"{eid} 3 2 {p} {p} {n0} {n3} {n2} {n1}\n")
                     eid += 1
         f.write("$EndElements\n")
 

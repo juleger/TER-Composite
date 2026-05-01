@@ -110,6 +110,8 @@ void Config::loadFromFile(const string& filename) {
         string legacyPrefix = getString("output_prefix", "");
         if (!legacyPrefix.empty()) outputVtk = legacyPrefix + ".vtk";
     }
+
+    planTransverse = getStringAny({"plan_transverse"}, "true") == "true";
 }
 
 vector<string> Config::splitList(const string& raw) const {

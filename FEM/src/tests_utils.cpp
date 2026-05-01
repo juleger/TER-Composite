@@ -155,7 +155,7 @@ void exportConvergenceCSV(const vector<ConvergenceResult>& results, const string
     if (opt.showErrE)   csv << ",err_E_rel";
     if (opt.showErrNu)  csv << ",err_nu_rel";
     if (opt.showErrG)   csv << ",err_G_rel";
-    csv << "\n";
+    csv << ",tcpu\n";
 
     for (size_t i = 0; i < results.size(); ++i) {
         const auto& r = results[i];
@@ -186,9 +186,29 @@ void exportConvergenceCSV(const vector<ConvergenceResult>& results, const string
             if (r.errGrel >= 0.0) csv << r.errGrel;
             else                  csv << "-";
         }
-        csv << "\n";
+        csv << "," << r.tcpu << "\n";
     }
     cout << "Fichier CSV de convergence exporté : " << path << "\n" << endl;
+}
+
+void exportCompositePropertiesCSV(const CompositeMaterial& comp, const string& path, double h, double tcpumax) {
+    ofstream csv(path);
+    if (!csv.is_open()) { cerr << "Impossible d'écrire: " << path << "\n"; return; }
+    csv << fixed << setprecision(8);
+    csv << "Property,Value,Voigt,Reuss\n";
+    csv << "h," << h << ",,\n";
+    csv << "E1," << comp.E1 << "," << comp.E1_voigt << "," << comp.E1_reuss << "\n";
+    csv << "E2," << comp.E2 << ",,\n";
+    csv << "v12," << comp.v12 << "," << comp.v12_voigt << "," << comp.v12_reuss << "\n";
+    csv << "v21," << comp.v21 << ",,\n";
+    csv << "G12," << comp.G12 << "," << comp.G12_voigt << "," << comp.G12_reuss << "\n";
+    csv << "G23," << comp.G23 << ",,\n";  // Value du test EF, pas de bornes
+    csv << "V_fiber," << comp.V_fiber << ",,\n";
+    csv << "V_matrix," << comp.V_matrix << ",,\n";
+    csv << "V_pore," << comp.V_pore << ",,\n";
+    csv << "tcpumax," << tcpumax << ",,\n";
+    csv.close();
+    cout << "Fichier CSV des propriétés composites exporté : " << path << "\n" << endl;
 }
 
 string convergenceVtkPath(const Config& config, double lc) {
@@ -214,6 +234,24 @@ void applyShearDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget)
         const double y = mesh.getNode(id).coords.y();
         solver.setDirichletBC(id, 0, gammaTarget * y);
         solver.setDirichletBC(id, 1, 0.0);
+    }
+}
+
+void applyShearTransverseDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget) {
+    vector<int> boundaryNodes;
+    boundaryNodes.reserve(mesh.leftNodes.size() + mesh.rightNodes.size() + mesh.topNodes.size() + mesh.bottomNodes.size());
+    boundaryNodes.insert(boundaryNodes.end(), mesh.leftNodes.begin(), mesh.leftNodes.end());
+    boundaryNodes.insert(boundaryNodes.end(), mesh.rightNodes.begin(), mesh.rightNodes.end());
+    boundaryNodes.insert(boundaryNodes.end(), mesh.topNodes.begin(), mesh.topNodes.end());
+    boundaryNodes.insert(boundaryNodes.end(), mesh.bottomNodes.begin(), mesh.bottomNodes.end());
+
+    sort(boundaryNodes.begin(), boundaryNodes.end());
+    boundaryNodes.erase(unique(boundaryNodes.begin(), boundaryNodes.end()), boundaryNodes.end());
+
+    for (int id : boundaryNodes) {
+        const double x = mesh.getNode(id).coords.x();
+        solver.setDirichletBC(id, 0, 0.0);
+        solver.setDirichletBC(id, 1, gammaTarget * x);
     }
 }
 

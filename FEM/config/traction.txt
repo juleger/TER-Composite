@@ -10,7 +10,7 @@ nu = 0.3
 rho = 7850.0
 
 # Force totale appliquée (en Newtons)
-F = 1e6
+F = 1e3
 
 # Solveur
 precond = diag

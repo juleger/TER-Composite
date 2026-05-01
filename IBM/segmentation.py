@@ -10,15 +10,11 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import torchvision.transforms.functional as TF
 from scipy.ndimage import map_coordinates, gaussian_filter
 
-"""
-Ce script implémente la segmentation d'images de matériaux composites (Fibre, matrice, porosités) en utilisant un réseau de neurones de type U-Net. Le principe est de découper les images en patchs, d'entraîner le modèle sur ces patchs, puis d'utiliser une approche de "sliding window" pour faire des prédictions sur des images de taille arbitraire. Le réseau est entraîné à minimiser la perte de cross-entropie, et la performance est évaluée à l'aide de l'IoU moyen sur les classes présentes dans le batch. 
-"""
-
 DATASET_DIR = os.path.join(os.path.dirname(__file__), "dataset")
 WEIGHTS_PATH = os.path.join(os.path.dirname(__file__), "unet_weights.pth")
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 PATCH_SIZE = 256
-PATCHES_PER_IMAGE = 128
+PATCHES_PER_IMAGE = 256
 BATCH_SIZE = 16
 NUM_EPOCHS = 100
 NUM_WORKERS = 8
@@ -26,15 +22,21 @@ LR = 1e-3
 NUM_CLASSES = 3
 VAL_SPLIT = 0.2
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-CLASS_COLORS = np.array([[0, 0, 0], [180, 100, 255], [255, 80, 80]], dtype=np.uint8)
-CLASS_NAMES = ["Matrix", "Fiber", "Pore"]
+CLASS_COLORS = np.array([
+    [150, 150, 150],
+    [220, 50, 47],
+    [38, 139, 210]
+], dtype=np.uint8)
+CLASS_NAMES = ["Matrice", "Fibre", "Porosité"]
 
 class DoubleConv(nn.Module):
     def __init__(self, in_ch, out_ch):
         super().__init__()
         self.net = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=False), nn.BatchNorm2d(out_ch), nn.ReLU(inplace=True),
+            nn.Dropout2d(0.1),
             nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False), nn.BatchNorm2d(out_ch), nn.ReLU(inplace=True),
+            nn.Dropout2d(0.1),
         )
     def forward(self, x): return self.net(x)
 
@@ -112,6 +114,9 @@ class PatchDataset(Dataset):
                 img = gaussian_filter(img, sigma=random.uniform(0.3, 1.2)).astype(np.float32)
             if random.random() > 0.5:
                 img = np.clip(img + np.random.normal(0, random.uniform(0.01, 0.04), img.shape), 0, 1).astype(np.float32)
+
+            if random.random() > 0.5:
+                img = 1 - img
 
         return torch.from_numpy(img).unsqueeze(0), torch.from_numpy(lbl.copy())
 
@@ -195,9 +200,9 @@ def train():
     # Courbes
     epochs = range(1, len(history["train_loss"]) + 1)
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
-    for ax, k, title in [(ax1, "loss", "Cross-Entropy Loss"), (ax2, "iou", "Mean IoU")]:
-        ax.plot(epochs, history[f"train_{k}"], label="Train")
-        ax.plot(epochs, history[f"val_{k}"],   label="Val")
+    for ax, k, title in [(ax1, "loss", "Entropie croisée"), (ax2, "iou", "IoU moyen")]:
+        ax.plot(epochs, history[f"train_{k}"], label="Entrainement")
+        ax.plot(epochs, history[f"val_{k}"],   label="Validation")
         ax.set_title(title); ax.set_xlabel("Epoch"); ax.legend(); ax.grid(True)
     plt.tight_layout()
     out = os.path.join(os.path.dirname(__file__), "training_curves.png")
@@ -213,8 +218,8 @@ def predict_examples(model, n_samples=3):
         img_np = np.array(Image.open(os.path.join(d, "img.png")).convert("L"), dtype=np.float32) / 255.0
         lbl_np = np.array(Image.open(os.path.join(d, "label.png")), dtype=np.int64)
         pred   = sliding_window_predict(model, img_np)
-        for ax, data, title, kw in zip(axes[row],[img_np, CLASS_COLORS[lbl_np], CLASS_COLORS[pred]],["Image", "Réalité", "Prédiction"],[{"cmap": "gray"}, {}, {}]):
-            ax.imshow(data, **kw); ax.set_title(title); ax.axis("off")
+        for ax, data, title, kw in zip(axes[row],[img_np, CLASS_COLORS[lbl_np], CLASS_COLORS[pred]],["Image originale", "Étiquette réelle", "Prédiction U-Net"],[{"cmap": "gray"}, {}, {}]):
+            ax.imshow(data, **kw); ax.set_title(title, fontsize=12, fontweight='bold'); ax.axis("off")
     plt.tight_layout()
     out = os.path.join(os.path.dirname(__file__), "predictions.png")
     plt.savefig(out, dpi=150); plt.show(); print(f"Predictions saved : {out}")
@@ -222,7 +227,7 @@ def predict_examples(model, n_samples=3):
 
 def predict_image(image_path, weights_path=WEIGHTS_PATH, save=True):
     os.makedirs(RESULTS_DIR, exist_ok=True)
-    stem  = os.path.splitext(os.path.basename(image_path))[0]
+    stem  = os.path.basename(image_path).split('_')[0]
     model = UNet().to(DEVICE)
     model.load_state_dict(torch.load(weights_path, map_location=DEVICE))
     model.eval()
@@ -234,10 +239,10 @@ def predict_image(image_path, weights_path=WEIGHTS_PATH, save=True):
         print(f"  {CLASS_NAMES[cls]:12s}: {cnt/pred.size*100:.2f}%")
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
-    ax1.imshow(img_np, cmap="gray"); ax1.set_title("Image originale"); ax1.axis("off")
-    ax2.imshow(CLASS_COLORS[pred]);  ax2.set_title("Segmentation U-Net"); ax2.axis("off")
+    ax1.imshow(img_np, cmap="gray"); ax1.set_title("Image originale", fontsize=14, fontweight='bold'); ax1.axis("off")
+    ax2.imshow(CLASS_COLORS[pred]);  ax2.set_title("Segmentation U-Net", fontsize=14, fontweight='bold'); ax2.axis("off")
     ax2.legend(handles=[Patch(color=CLASS_COLORS[i]/255, label=CLASS_NAMES[i]) for i in range(NUM_CLASSES)],
-               loc="lower right", fontsize=9)
+               loc="lower right", fontsize=12, prop={'weight':'bold'})
     plt.tight_layout()
     if save:
         png_out = os.path.join(RESULTS_DIR, f"{stem}_segmented.png")

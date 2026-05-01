@@ -69,7 +69,6 @@ public:
     void printS() const;
     void printProperties() const;
     
-    // Tenseur de rigidité avec rotation selon angle θ (degrés)
     Eigen::Matrix3d getRotatedStiffness(double theta_deg) const;
 };
 #endif

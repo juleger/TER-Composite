@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cmath>
 #include <Eigen/Dense>
+#include <chrono>
 
 using namespace std;
 
@@ -28,8 +29,9 @@ void runShearTest(const vector<string>& meshFiles, const vector<double>& meshLc,
             solver.assemble();
 
             for (int id : mesh.bottomNodes) {
-                solver.setDirichletBC(id, 0, 0.0);
                 solver.setDirichletBC(id, 1, 0.0);
+                solver.setDirichletBC(id, 0, 0.0);
+            
             }
 
             const double L     = mesh.width();
@@ -50,7 +52,10 @@ void runShearTest(const vector<string>& meshFiles, const vector<double>& meshLc,
                 }, 0);
 
             solver.applyBC();
+            auto start = chrono::high_resolution_clock::now();
             solver.solveConjugateGradient();
+            auto end = chrono::high_resolution_clock::now();
+            double tcpu = chrono::duration<double>(end - start).count();
             solver.computeStrainStress();
             solver.saveVTK(convergenceVtkPath(config, h));
 
@@ -66,10 +71,14 @@ void runShearTest(const vector<string>& meshFiles, const vector<double>& meshLc,
             const double W_ext = solver.computeExternalWork();
             const double deltaWrel = abs(W_int - W_ext) / max(abs(W_int), 1e-30);
 
-            cout << "deltaW_rel=" << deltaWrel << ", G_app=" << Gapp
-                 << ", gamma_app=" << gammaApp << endl;
+            const double V = L * H;
+            const double G_energy = 2.0 * W_int / max(gammaApp * gammaApp * V, 1e-30);
+            const double errG_rel = abs(Gapp - G_energy) / max(Gapp, 1e-30);
 
-            out = {h, mesh.nbElements(), -1.0, deltaWrel, -1.0, -1.0, -1.0};
+            cout << "deltaW_rel=" << deltaWrel << ", G_app=" << Gapp
+                 << ", G_energy=" << G_energy << ", err_G_rel=" << errG_rel << endl;
+
+            out = {h, mesh.nbElements(), -1.0, deltaWrel, -1.0, -1.0, -1.0, tcpu};
             return true;
         });
 

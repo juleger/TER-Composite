@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 from pathlib import Path
 import os
 
@@ -21,18 +22,27 @@ if __name__ == "__main__":
     parser.add_argument("--mesh-type", choices=["quad", "tri"], default="quad")
     parser.add_argument("--min-size", type=int, default=1000)
     parser.add_argument("--resolution", type=int, default=4)
-    parser.add_argument("--out", default="results/composite_quad.msh")
+    parser.add_argument("--out", default=None)
     args = parser.parse_args()
 
     image_path = Path(args.img_path)
     weights_path = Path(args.weights_path)
-    mesh_path = Path(args.out)
-    mesh_path = results_dir / mesh_path.name
-    segmentation_path = results_dir / f"{image_path.stem}_seg.npy"
-    seg = predict_image(str(image_path), weights_path=str(weights_path), save=True)
+    stem_num = image_path.stem.split('_')[0]
+    segmentation_path = results_dir / f"{stem_num}_seg.npy"
+    if segmentation_path.exists():
+        print(f"Segmentation déjà existante : {segmentation_path}")
+        seg = np.load(str(segmentation_path))
+    else:
+        seg = predict_image(str(image_path), weights_path=str(weights_path), save=True)
+    vf = np.sum(seg == 1) / seg.size
+    if args.out is None:
+        mesh_path = results_dir / f"composite{stem_num}_vf{vf:.3f}.msh"
+    else:
+        mesh_path = results_dir / Path(args.out).name
     h, w, ne = generate_mesh(seg, str(mesh_path), downscale=args.resolution, min_size=args.min_size, tri=args.mesh_type == "tri")
-
+    h_carac = (1.0 / ne) ** 0.5 if ne > 0 else 0  # Taille de maille caractéristique approximative
     print(f"Segmentation : {segmentation_path}")
     print(f"Maillage : {mesh_path}")
     print(f"Dimensions : {h}x{w}")
     print(f"Elements : {ne}")
+    print(f"Taille de maille caractéristique h : {h_carac:.4f}")

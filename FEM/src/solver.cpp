@@ -362,10 +362,9 @@ double Solver::computeExternalWork() const {
 double Solver::computeTsaiHill(int elemId, double Xt, double Yt, double S) const {
     if (elemId < 0 || elemId >= _stress.rows()) return -1.0; // Erreur
     Eigen::Vector3d sigma = _stress.row(elemId);
-    double sigma1 = sigma(0); // σ_xx (direction fibres)
-    double sigma2 = sigma(1); // σ_yy (transverse)
-    double tau12 = sigma(2);  // τ_xy
-    // Critère Tsai-Hill : (σ1/Xt)^2 + (σ2/Yt)^2 + (τ12/S)^2 - σ1*σ2/Xt^2 <= 1
+    double sigma1 = sigma(0); 
+    double sigma2 = sigma(1); 
+    double tau12 = sigma(2);
     double criterion = (sigma1/Xt)*(sigma1/Xt) + (sigma2/Yt)*(sigma2/Yt) + (tau12/S)*(tau12/S) - sigma1*sigma2/(Xt*Xt);
     return criterion;
 }

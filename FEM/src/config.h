@@ -48,6 +48,9 @@ public:
     std::string meshPrefix;
     std::string meshSuffix;
     std::vector<std::string> meshLcTokens;
+
+    // Plan transverse ou longitudinal
+    bool planTransverse = true;
     
     // Fichier de sortie VTK (nom de fichier uniquement, dossier forcé à results/)
     std::string outputVtk;

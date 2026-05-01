@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <Eigen/Dense>
+#include <chrono>
 
 using namespace std;
 
@@ -47,7 +48,10 @@ void runTractionTest(const vector<string>& meshFiles,const vector<double>& meshL
                 }, 0);
 
             solver.applyBC();
+            auto start = chrono::high_resolution_clock::now();
             solver.solveConjugateGradient();
+            auto end = chrono::high_resolution_clock::now();
+            double tcpu = chrono::duration<double>(end - start).count();
             solver.computeStrainStress();
             solver.saveVTK(convergenceVtkPath(config, h));
 
@@ -80,7 +84,7 @@ void runTractionTest(const vector<string>& meshFiles,const vector<double>& meshL
                  << ", err_E_rel = " << errErel << ", err_nu_rel = " << errNurel
                  << ", deltaW_rel = " << deltaWrel << endl;
 
-            out = {h, mesh.nbElements(), -1.0, deltaWrel, errErel, errNurel, -1.0};
+            out = {h, mesh.nbElements(), -1.0, deltaWrel, errErel, errNurel, -1.0, tcpu};
             return true;
         });
 

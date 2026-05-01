@@ -1,26 +1,29 @@
 # Configuration pour test composite C/C (Carbone/Carbone)
-# Carré avec fibre carbone au centre dans matrice carbone - test de traction
 
 test_type = composite
 
-element_type = P1
+element_type = Q1
 # Fichier de maillage
-mesh_file = mesh/composite_simple.msh
+mesh_file = mesh/composite_T/composite1_vf0.452.msh
 
 dimension_scale = 1
-E = 3e9
+E = 215e9
 nu = 0.41
 rho = 1300             # kg/m³
 
-# Matériau 2: Fibre verre
-E_fiber = 228e9
-nu_fiber = 0.2
+# Matériau 2: Fibre
+E_fiber = 20e9
+nu_fiber = 0.20
 rho_fiber = 1800   
+
+#E_pore = 1e6
+#nu_pore = 0.3
+#rho_pore = 10
 
 # Chargement
 F = 1000         # Force en N
 
 # Solveur
 precond = ic
-tol = 1e-8
-maxIter = 2000
+tol = 1e-6
+maxIter = 4000
