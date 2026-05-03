@@ -104,8 +104,8 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     double dWrel = abs(Wint - Wext) / max(abs(Wint), 1e-30);
     cout << "\n-------- Propriétés effectives :" << endl;
     comp.updateFromTractionX(sigma_x, epsilon_x, epsilon_y);
-    cout << " E_1 : " << comp.E1/1e9 << " GPa" << " (Voigt: " << comp.E1_voigt/1e9 << " GPa, Reuss: " << comp.E1_reuss/1e9 << " GPa, Hill: " << comp.E1_hill/1e9 << " GPa)" << endl;
-    cout << " v_12 : " << comp.v12 << " (Voigt: " << comp.v12_voigt << ", Reuss: " << comp.v12_reuss << ", Hill: " << comp.v12_hill << ")" << endl;
+    cout << " E_1 : " << comp.E1/1e9 << " GPa" << " (Voigt: " << comp.E1_voigt/1e9 << " GPa, Reuss: " << comp.E1_reuss/1e9 << " GPa, Hill: " << comp.E1_hill/1e9 << " GPa, Halpin-Tsai: " << comp.E1_halpin_tsai/1e9 << " GPa)" << endl;
+    cout << " v_12 : " << comp.v12 << " (Voigt: " << comp.v12_voigt << ", Reuss: " << comp.v12_reuss << ", Hill: " << comp.v12_hill << ", Halpin-Tsai: " << comp.v12_halpin_tsai << ")" << endl;
     cout << " Delta W_rel = " << dWrel << endl;
 
     solver.clearBCs();
@@ -186,7 +186,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     comp.updateFromShear(tau_xy, gamma12);
     cout << "\n-------- Propriétés effectives :" << endl;
         cout << " G12 : " << comp.G12/1e9 << " GPa"
-                << " (Voigt: " << comp.G12_voigt/1e9 << " GPa, Reuss: " << comp.G12_reuss/1e9 << " GPa, Hill: " << comp.G12_hill/1e9 << " GPa)" << endl;
+            << " (Voigt: " << comp.G12_voigt/1e9 << " GPa, Reuss: " << comp.G12_reuss/1e9 << " GPa, Hill: " << comp.G12_hill/1e9 << " GPa, Halpin-Tsai: " << comp.G12_halpin_tsai/1e9 << " GPa)" << endl;
     cout << " tau_xy moyen = " << tau_xy/1e6 << " MPa"
          << ", G12_energie = " << G12_energy/1e9 << " GPa" << endl;
     cout << " gamma12 mesuré = " << gamma12 << " (cible: " << gammaTarget << ")" << endl;

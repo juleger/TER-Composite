@@ -61,6 +61,30 @@ void CompositeMaterial::computeVoigtReussBounds() {
     E1_hill = 0.5 * (E1_voigt + E1_reuss);
     v12_hill = 0.5 * (v12_voigt + v12_reuss);
     G12_hill = 0.5 * (G12_voigt + G12_reuss);
+
+    // Halpin-Tsai.
+    const double epsilon_ht = 1.0;
+    const double vf_total = max(V_fiber + V_matrix + V_pore, eps);
+    const double f = max(0.0, min(1.0, V_fiber / vf_total));
+    const double vm = max(V_matrix + V_pore, eps);
+
+    const double E_m_eff = (V_matrix * matrix->E + V_pore * pore->E) / vm;
+    const double nu_m_eff = (V_matrix * matrix->nu + V_pore * pore->nu) / vm;
+    const double G_m_eff = (V_matrix * G_matrix + V_pore * G_pore) / vm;
+
+    auto halpinTsai = [eps](double P_f, double P_m, double fiberFrac, double epsilonVal) {
+        const double PmSafe = (abs(P_m) > eps) ? P_m : (P_m >= 0.0 ? eps : -eps);
+        const double ratio = P_f / PmSafe;
+        const double denomEta = ratio + epsilonVal;
+        const double eta = (abs(denomEta) > eps) ? ((ratio - 1.0) / denomEta) : 0.0;
+        const double denom = 1.0 - eta * fiberFrac;
+        if (abs(denom) < eps) return P_m;
+        return P_m * (1.0 + epsilonVal * eta * fiberFrac) / denom;
+    };
+
+    E1_halpin_tsai = halpinTsai(fiber->E, E_m_eff, f, epsilon_ht);
+    v12_halpin_tsai = halpinTsai(fiber->nu, nu_m_eff, f, epsilon_ht);
+    G12_halpin_tsai = halpinTsai(G_fiber, G_m_eff, f, epsilon_ht);
 }
 
 void CompositeMaterial::updateFromTractionX(double sigmaX, double epsX, double epsY) {
@@ -85,24 +109,14 @@ void CompositeMaterial::computeEffectiveProperties() {
 }
 
 void CompositeMaterial::printProperties() const {
-    cout << "=== Propriétés du matériau composite ===" << endl;
+    cout << endl << "-------- Propriétés effectives (plan transversal)" << endl;
     cout << "Vf = " << V_fiber << ", Vm = " << V_matrix << ", Vp = " << V_pore << endl;
-    cout << "E_1 = " << E1 << " Pa" << endl;
-    cout << "E_2 = " << E2 << " Pa" << endl;
-    cout << "E_3 = " << E3 << " Pa" << endl;
-    cout << "v_12 = " << v12 << endl;
+    cout << "E_1 = " << E1/1e9 << " GPa (Voigt: " << E1_voigt/1e9 << " GPa, Reuss: " << E1_reuss/1e9 << " GPa, Hill: " << E1_hill/1e9 << " GPa, Halpin-Tsai: " << E1_halpin_tsai/1e9 << " GPa)" << endl;
+    cout << "E_2 = " << E2/1e9 << " GPa" << endl;
+    cout << "v_12 = " << v12 << " (Voigt: " << v12_voigt << ", Reuss: " << v12_reuss << ", Hill: " << v12_hill << ", Halpin-Tsai: " << v12_halpin_tsai << ")" << endl;
     cout << "v_21 = " << v21 << endl;
-    cout << "v_13 = " << v13 << endl;
-    cout << "v_23 = " << v23 << endl;
-    cout << "G_12 = " << G12 << " Pa" << endl;
-    cout << "G_13 = " << G13 << " Pa" << endl;
-    cout << "G_23 = " << G23 << " Pa" << endl;
-    cout << "Bornes E1 (Voigt/Reuss) = " << E1_voigt << " / " << E1_reuss << " Pa" << endl;
-    cout << "Borne E1 de Hill = " << E1_hill << " Pa" << endl;
-    cout << "Bornes v12 (Voigt/Reuss) = " << v12_voigt << " / " << v12_reuss << endl;
-    cout << "Borne v12 de Hill = " << v12_hill << endl;
-    cout << "Bornes G12 (Voigt/Reuss) = " << G12_voigt << " / " << G12_reuss << " Pa" << endl;
-    cout << "Borne G12 de Hill = " << G12_hill << " Pa" << endl;
+    cout << "G_12 = " << G12/1e9 << " GPa" << " (Voigt: " << G12_voigt/1e9 << " GPa, Reuss: " << G12_reuss/1e9 << " GPa, Hill: " << G12_hill/1e9 << " GPa, Halpin-Tsai: " << G12_halpin_tsai/1e9 << " GPa)" << endl;
+
 }
 
 Eigen::Matrix3d CompositeMaterial::getRotatedStiffness(double theta_deg) const {
@@ -125,11 +139,11 @@ void CompositeMaterial::buildMatrixes() {
     C = S.inverse();
 }
 void CompositeMaterial::printC() const {
-    cout << "Matrice de rigidité C :" << endl;
+    cout << endl << "Matrice de rigidité C :" << endl;
     cout << C << endl;
 }
 
 void CompositeMaterial::printS() const {
-    cout << "Matrice de compliance S :" << endl;
+    cout << endl << "Matrice de compliance S :" << endl;
     cout << S << endl;
 }

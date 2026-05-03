@@ -45,12 +45,15 @@ public:
     double E1_voigt = 0.0;
     double E1_reuss = 0.0;
     double E1_hill = 0.0;
+    double E1_halpin_tsai = 0.0;
     double v12_voigt = 0.0;
     double v12_reuss = 0.0;
     double v12_hill = 0.0;
+    double v12_halpin_tsai = 0.0;
     double G12_voigt = 0.0;
     double G12_reuss = 0.0;
     double G12_hill = 0.0;
+    double G12_halpin_tsai = 0.0;
     
     Eigen::Matrix3d S = Eigen::Matrix3d::Zero(); // Matrice de compliance
     Eigen::Matrix3d C = Eigen::Matrix3d::Zero(); // Matrice de rigidité

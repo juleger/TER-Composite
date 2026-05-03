@@ -195,18 +195,18 @@ void exportCompositePropertiesCSV(const CompositeMaterial& comp, const string& p
     ofstream csv(path);
     if (!csv.is_open()) { cerr << "Impossible d'écrire: " << path << "\n"; return; }
     csv << fixed << setprecision(8);
-    csv << "Property,Value,Voigt,Reuss,Hill\n";
-    csv << "h," << h << ",,,\n";
-    csv << "n_elems," << nElems << ",,,\n";
-    csv << "E1," << comp.E1 << "," << comp.E1_voigt << "," << comp.E1_reuss << "," << comp.E1_hill << "\n";
-    csv << "E2," << comp.E2 << ",,,\n";
-    csv << "v12," << comp.v12 << "," << comp.v12_voigt << "," << comp.v12_reuss << "," << comp.v12_hill << "\n";
-    csv << "v21," << comp.v21 << ",,,\n";
-    csv << "G12," << comp.G12 << "," << comp.G12_voigt << "," << comp.G12_reuss << "," << comp.G12_hill << "\n";
-    csv << "V_fiber," << comp.V_fiber << ",,,\n";
-    csv << "V_matrix," << comp.V_matrix << ",,,\n";
-    csv << "V_pore," << comp.V_pore << ",,,\n";
-    csv << "tcpumax," << tcpumax << ",,,\n";
+    csv << "Property,Value,Voigt,Reuss,Hill,HalpinTsai\n";
+    csv << "h," << h << ",,,,\n";
+    csv << "n_elems," << nElems << ",,,,\n";
+    csv << "E1," << comp.E1 << "," << comp.E1_voigt << "," << comp.E1_reuss << "," << comp.E1_hill << "," << comp.E1_halpin_tsai << "\n";
+    csv << "E2," << comp.E2 << ",,,,\n";
+    csv << "v12," << comp.v12 << "," << comp.v12_voigt << "," << comp.v12_reuss << "," << comp.v12_hill << "," << comp.v12_halpin_tsai << "\n";
+    csv << "v21," << comp.v21 << ",,,,\n";
+    csv << "G12," << comp.G12 << "," << comp.G12_voigt << "," << comp.G12_reuss << "," << comp.G12_hill << "," << comp.G12_halpin_tsai << "\n";
+    csv << "V_fiber," << comp.V_fiber << ",,,,\n";
+    csv << "V_matrix," << comp.V_matrix << ",,,,\n";
+    csv << "V_pore," << comp.V_pore << ",,,,\n";
+    csv << "tcpumax," << tcpumax << ",,,,\n";
     csv.close();
     cout << "Fichier CSV des propriétés composites exporté : " << path << "\n" << endl;
 }
