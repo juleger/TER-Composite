@@ -1,0 +1,29 @@
+# Configuration pour test composite C/C (Carbone/Carbone)
+
+test_type = composite
+
+element_type = Q1
+# Fichier de maillage
+#mesh_file = mesh/composite_convergence/composite1_vf0.452_3.msh
+mesh_file = mesh/composite_T/composite25_vf0.372.msh
+dimension_scale = 1
+E = 12e9
+nu = 0.3
+rho = 1300             # kg/m³
+
+# Matériau 2: Fibre
+E_fiber = 34e9
+nu_fiber = 0.25
+rho_fiber = 1800   
+
+#E_pore = 1e6
+#nu_pore = 0.3
+#rho_pore = 10
+
+# Chargement
+F = 1e3         # Force en N
+
+# Solveur
+precond = ic
+tol = 1e-6
+maxIter = 4000

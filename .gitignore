@@ -15,6 +15,5 @@ rapport/
 *.log
 *.out
 *.toc
-*.vtk
 CMakeCache.txt
 __pycache__/

@@ -194,7 +194,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     comp.buildMatrixes();
     comp.printC();
     comp.printS();
-
+    comp.printProperties();
     // Export des propriétés effectives vers CSV
     string meshName = meshFile;
     size_t start = meshName.find_last_of('/') + 1;
