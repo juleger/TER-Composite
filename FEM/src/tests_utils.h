@@ -43,7 +43,7 @@ void exportConvergenceCSV(const std::vector<ConvergenceResult>& results, const s
                           const ReportOptions& opt,
                           const std::function<double(const ConvergenceResult&)>& orderMetric);
 
-void exportCompositePropertiesCSV(const CompositeMaterial& comp, const std::string& path, double h, double tcpumax);
+void exportCompositePropertiesCSV(const CompositeMaterial& comp, const std::string& path, double h, int nElems, double tcpumax);
 
 std::string convergenceVtkPath(const Config& config, double lc);
 

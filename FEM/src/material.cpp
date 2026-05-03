@@ -57,6 +57,10 @@ void CompositeMaterial::computeVoigtReussBounds() {
     E1_reuss = 1.0 / max(V_fiber / max(fiber->E, eps) + V_matrix / max(matrix->E, eps) + V_pore / max(pore->E, eps), eps);
     v12_reuss = 1.0 / max(V_fiber / max(fiber->nu, eps) + V_matrix / max(matrix->nu, eps) + V_pore / max(pore->nu, eps), eps);
     G12_reuss = 1.0 / max(V_fiber / max(G_fiber, eps) + V_matrix / max(G_matrix, eps) + V_pore / max(G_pore, eps), eps);
+
+    E1_hill = 0.5 * (E1_voigt + E1_reuss);
+    v12_hill = 0.5 * (v12_voigt + v12_reuss);
+    G12_hill = 0.5 * (G12_voigt + G12_reuss);
 }
 
 void CompositeMaterial::updateFromTractionX(double sigmaX, double epsX, double epsY) {
@@ -94,8 +98,11 @@ void CompositeMaterial::printProperties() const {
     cout << "G_13 = " << G13 << " Pa" << endl;
     cout << "G_23 = " << G23 << " Pa" << endl;
     cout << "Bornes E1 (Voigt/Reuss) = " << E1_voigt << " / " << E1_reuss << " Pa" << endl;
+    cout << "Borne E1 de Hill = " << E1_hill << " Pa" << endl;
     cout << "Bornes v12 (Voigt/Reuss) = " << v12_voigt << " / " << v12_reuss << endl;
+    cout << "Borne v12 de Hill = " << v12_hill << endl;
     cout << "Bornes G12 (Voigt/Reuss) = " << G12_voigt << " / " << G12_reuss << " Pa" << endl;
+    cout << "Borne G12 de Hill = " << G12_hill << " Pa" << endl;
 }
 
 Eigen::Matrix3d CompositeMaterial::getRotatedStiffness(double theta_deg) const {

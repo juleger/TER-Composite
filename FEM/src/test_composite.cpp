@@ -12,77 +12,11 @@
 using namespace std;
 
 void runCompositeTest(const string& meshFile, const Config& config) {
-    if (!config.planTransverse) {
-        // Test longitudinal : estimations analytiques pour E3 et G23
-        cout << "------------------ TEST LONGITUDINAL ------------------" << endl;
-        cout << "Fichier de maillage: " << meshFile << endl;
-        cout << "Nombres de threads: " << omp_get_max_threads() << endl;
-
-        Mesh mesh;
-        Material matrix(config.E, config.nu, config.rho);
-        Material fiber(config.E_fiber, config.nu_fiber, config.rho_fiber);
-        Material pore(config.E_pore, config.nu_pore, config.rho_pore);
-        CompositeMaterial comp(&matrix, &fiber, config.hasPores ? &pore : &matrix);
-        MeshReader reader(&mesh);
-        reader.setMaterial(1, &matrix);
-        reader.setMaterial(2, &fiber);
-        reader.setMaterial(3, config.hasPores ? &pore : &matrix);
-        reader.readGmshFile(meshFile);
-        mesh.initializeElements();
-        mesh.computeGeometry();
-        double h = mesh.computeCharacteristicLength();
-
-        const double V_fiber = mesh.computeVolumeFraction(comp.fiber);
-        const double V_pore = config.hasPores ? mesh.computeVolumeFraction(comp.pore) : 0.0;
-        const double V_matrix = max(0.0, 1.0 - V_fiber - V_pore);
-        comp.setVolumeFractions(V_fiber, V_matrix, V_pore);
-        comp.computeEffectiveProperties();
-
-        cout << " Volume fraction : Fiber = " << comp.V_fiber << ", Matrix = " << comp.V_matrix;
-        if (config.hasPores) { cout << ", Pore = " << comp.V_pore; }
-        cout << endl;
-
-        // Estimations analytiques pour E3 et G23 (direction transverse/longitudinal)
-        double E3_voigt = V_fiber * fiber.E + V_matrix * matrix.E + V_pore * pore.E;
-        double E3_reuss = 1.0 / (V_fiber / fiber.E + V_matrix / matrix.E + V_pore / pore.E);
-
-        double G_fiber_trans = fiber.E / (2.0 * (1.0 + fiber.nu));
-        double G_matrix_trans = matrix.E / (2.0 * (1.0 + matrix.nu));
-        double G_pore_trans = pore.E / (2.0 * (1.0 + pore.nu));
-        double G23_voigt = V_fiber * G_fiber_trans + V_matrix * G_matrix_trans + V_pore * G_pore_trans;
-        double G23_reuss = 1.0 / (V_fiber / G_fiber_trans + V_matrix / G_matrix_trans + V_pore / G_pore_trans);
-
-        cout << "\n-------- Propriétés effectives longitudinales :" << endl;
-        cout << " E3 : " << E3_voigt/1e9 << " GPa (Voigt), " << E3_reuss/1e9 << " GPa (Reuss)" << endl;
-        cout << " G23 : " << G23_voigt/1e9 << " GPa (Voigt), " << G23_reuss/1e9 << " GPa (Reuss)" << endl;
-
-        // Export CSV
-        string meshName = meshFile;
-        size_t start = meshName.find_last_of('/') + 1;
-        size_t end = meshName.find_last_of('.');
-        if (end == string::npos) end = meshName.size();
-        meshName = meshName.substr(start, end - start);
-        string csvFile = "results/proprietes_longitudinal_" + meshName + ".csv";
-        ofstream csv(csvFile);
-        if (!csv.is_open()) { cerr << "Impossible d'écrire: " << csvFile << "\n"; return; }
-        csv << fixed << setprecision(8);
-        csv << "Property,Voigt,Reuss\n";
-        csv << "h," << h << ",\n";
-        csv << "E3," << E3_voigt << "," << E3_reuss << "\n";
-        csv << "G23," << G23_voigt << "," << G23_reuss << "\n";
-        csv << "V_fiber," << comp.V_fiber << ",\n";
-        csv << "V_matrix," << comp.V_matrix << ",\n";
-        csv << "V_pore," << comp.V_pore << ",\n";
-        csv << "tcpumax,0.0,\n";
-        csv.close();
-        cout << "Fichier CSV des propriétés longitudinales exporté : " << csvFile << "\n" << endl;
-        return;
-    }
-
     // Test composite transverse (original)
     cout << "------------------ TEST COMPOSITE ------------------" << endl;
     cout << "Fichier de maillage: " << meshFile << endl;
     cout << "Nombres de threads: " << omp_get_max_threads() << endl;
+    if (config.planTransverse) {
 
 
     Mesh mesh;
@@ -130,8 +64,8 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     solver.saveVTK("results/composite_traction_x.vtk");
     
     // Calcul critère de rupture Tsai-Hill
-    double Xt = 1000e6; // Résistance traction fibres (Pa)
-    double Yt = 50e6;   // Résistance transverse
+    double Xt = 18e6; // Résistance traction fibres (Pa)
+    double Yt = 100e6;   // Résistance transverse
     double S = 30e6;    // Résistance cisaillement
     std::vector<double> failureIndex(mesh.nbElements());
     double maxFailure = 0.0;
@@ -148,27 +82,30 @@ void runCompositeTest(const string& meshFile, const Config& config) {
         return sum / max<size_t>(1, nodes.size());
     };
     
-    double ux = calcDisp(mesh.rightNodes, 0);
-    double uy = (abs(calcDisp(mesh.topNodes, 1)) + abs(calcDisp(mesh.bottomNodes, 1))) / 2.0;
+    double ux_right = calcDisp(mesh.rightNodes, 0);
+    double ux_left = calcDisp(mesh.leftNodes, 0);
+    double uy_top = calcDisp(mesh.topNodes, 1);
+    double uy_bottom = calcDisp(mesh.bottomNodes, 1);
 
     double L = mesh.width();
     double H = mesh.height();
-    double A = H;  // section transversale (épaisseur unité = 1)
+    double A_x = H;  // longueur du bord chargé en traction x
+    double A_y = L;  // longueur du bord chargé en traction y
 
     // Déformations moyennes
-    double epsilon_x = ux / L;
-    double epsilon_y = -uy / (H/2.0);
+    double epsilon_x = (ux_right - ux_left) / max(L, 1e-30);
+    double epsilon_y = (uy_top - uy_bottom) / max(H, 1e-30);
     
     // Contrainte appliquée
-    double sigma_x = config.forceValue / A; 
+    double sigma_x = config.forceValue / A_x; 
     
     double Wint = solver.computeInternalEnergy();
     double Wext = solver.computeExternalWork();
     double dWrel = abs(Wint - Wext) / max(abs(Wint), 1e-30);
     cout << "\n-------- Propriétés effectives :" << endl;
     comp.updateFromTractionX(sigma_x, epsilon_x, epsilon_y);
-    cout << " E_1 : " << comp.E1/1e9 << " GPa" << " (Voigt: " << comp.E1_voigt/1e9 << " GPa, Reuss: " << comp.E1_reuss/1e9 << " GPa)" << endl;
-    cout << " v_12 : " << comp.v12 << " (Voigt: " << comp.v12_voigt << ", Reuss: " << comp.v12_reuss << ")" << endl;
+    cout << " E_1 : " << comp.E1/1e9 << " GPa" << " (Voigt: " << comp.E1_voigt/1e9 << " GPa, Reuss: " << comp.E1_reuss/1e9 << " GPa, Hill: " << comp.E1_hill/1e9 << " GPa)" << endl;
+    cout << " v_12 : " << comp.v12 << " (Voigt: " << comp.v12_voigt << ", Reuss: " << comp.v12_reuss << ", Hill: " << comp.v12_hill << ")" << endl;
     cout << " Delta W_rel = " << dWrel << endl;
 
     solver.clearBCs();
@@ -196,10 +133,11 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     solver.saveVTK("results/composite_traction_y.vtk");
     // Calcul de E2 et v21
     U = solver.getU();
-    double uy_y = calcDisp(mesh.topNodes, 1);
-    double epsilon_y_y = uy_y / H;
+    double uy_top_y = calcDisp(mesh.topNodes, 1);
+    double uy_bottom_y = calcDisp(mesh.bottomNodes, 1);
+    double epsilon_y_y = (uy_top_y - uy_bottom_y) / max(H, 1e-30);
     double epsilon_x_y = (calcDisp(mesh.rightNodes, 0) - calcDisp(mesh.leftNodes, 0)) / max(L, 1e-30);
-    double sigma_y = config.forceValue / A;
+    double sigma_y = config.forceValue / A_y;
     comp.updateFromTractionY(sigma_y, epsilon_y_y, epsilon_x_y);
 
     cout << "\n--------   Propriétés effectives :" << endl;
@@ -248,49 +186,10 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     comp.updateFromShear(tau_xy, gamma12);
     cout << "\n-------- Propriétés effectives :" << endl;
         cout << " G12 : " << comp.G12/1e9 << " GPa"
-            << " (Voigt: " << comp.G12_voigt/1e9 << " GPa, Reuss: " << comp.G12_reuss/1e9 << " GPa)" << endl;
+                << " (Voigt: " << comp.G12_voigt/1e9 << " GPa, Reuss: " << comp.G12_reuss/1e9 << " GPa, Hill: " << comp.G12_hill/1e9 << " GPa)" << endl;
     cout << " tau_xy moyen = " << tau_xy/1e6 << " MPa"
          << ", G12_energie = " << G12_energy/1e9 << " GPa" << endl;
     cout << " gamma12 mesuré = " << gamma12 << " (cible: " << gammaTarget << ")" << endl;
-
-    // Test de cisaillement transverse pour G23
-    solver.clearBCs();
-    solver.clearSystem();
-
-    cout << "\n-------- Résolution du cisaillement transverse (G23) ---------\n" << endl;
-    solver.assemble();
-    
-    applyShearTransverseDirichletBC(solver, mesh, gammaTarget);
-    solver.applyBC();
-    auto start_st = chrono::high_resolution_clock::now();
-    solver.solveConjugateGradient();
-    auto end_st = chrono::high_resolution_clock::now();
-    double tcpu_st = chrono::duration<double>(end_st - start_st).count();
-    cout << "Temps de résolution GC (cisaillement transverse): " << tcpu_st << " s" << endl;
-    solver.computeStrainStress();
-    Wint = solver.computeInternalEnergy();
-    const double G23_energy = 2.0 * Wint / max(gammaTarget * gammaTarget * V_shear, 1e-30);
-    solver.saveVTK("results/composite_shear_transverse.vtk");
-    U = solver.getU();
-    // Déformation relative mesurée pour transverse (approximation)
-    double gamma23 = (calcDisp(mesh.rightNodes, 1) - calcDisp(mesh.leftNodes, 1)) / max(L, 1e-30);  // U_y right - U_y left
-    // Contrainte de cisaillement moyenne
-    const Eigen::MatrixXd stress_trans = solver.getStress();
-    double sumTauA_trans = 0.0;
-    double sumArea_trans = 0.0;
-    for (int e = 0; e < mesh.nbElements(); ++e) {
-        const double area = mesh.elements[e]->area;
-        sumTauA_trans += stress_trans(e, 2) * area;  // tau_xy, mais pour transverse, c'est approximation
-        sumArea_trans += area;
-    }
-    const double tau_xy_trans = sumTauA_trans / max(sumArea_trans, 1e-30);
-    // Update G23 from this test
-    comp.G23 = tau_xy_trans / max(abs(gamma23), 1e-30);
-    cout << "\n-------- Propriétés effectives G23 :" << endl;
-    cout << " G23 : " << comp.G23/1e9 << " GPa (test EF)" << endl;
-    cout << " tau_xy_trans moyen = " << tau_xy_trans/1e6 << " MPa"
-         << ", G23_energie = " << G23_energy/1e9 << " GPa" << endl;
-    cout << " gamma23 mesuré = " << gamma23 << " (cible: " << gammaTarget << ")" << endl;
 
     comp.buildMatrixes();
     comp.printC();
@@ -303,6 +202,66 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     if (end == string::npos) end = meshName.size();
     meshName = meshName.substr(start, end - start);
     string csvFile = "results/proprietes_" + meshName + ".csv";
-    double tcpumax = max({tcpu_x, tcpu_y, tcpu_s, tcpu_st});
-    exportCompositePropertiesCSV(comp, csvFile, h, tcpumax);
+    double tcpumax = max({tcpu_x, tcpu_y, tcpu_s});
+    exportCompositePropertiesCSV(comp, csvFile, h, mesh.nbElements(), tcpumax);
+    }
+
+    if (!config.planTransverse) {
+        // Test longitudinal : estimations analytiques pour E3
+        cout << "------------------ TEST LONGITUDINAL ------------------" << endl;
+        cout << "Fichier de maillage: " << meshFile << endl;
+        cout << "Nombres de threads: " << omp_get_max_threads() << endl;
+
+        Mesh mesh;
+        Material matrix(config.E, config.nu, config.rho);
+        Material fiber(config.E_fiber, config.nu_fiber, config.rho_fiber);
+        Material pore(config.E_pore, config.nu_pore, config.rho_pore);
+        CompositeMaterial comp(&matrix, &fiber, config.hasPores ? &pore : &matrix);
+        MeshReader reader(&mesh);
+        reader.setMaterial(1, &matrix);
+        reader.setMaterial(2, &fiber);
+        reader.setMaterial(3, config.hasPores ? &pore : &matrix);
+        reader.readGmshFile(meshFile);
+        mesh.initializeElements();
+        mesh.computeGeometry();
+        double h = mesh.computeCharacteristicLength();
+
+        const double V_fiber = mesh.computeVolumeFraction(comp.fiber);
+        const double V_pore = config.hasPores ? mesh.computeVolumeFraction(comp.pore) : 0.0;
+        const double V_matrix = max(0.0, 1.0 - V_fiber - V_pore);
+        comp.setVolumeFractions(V_fiber, V_matrix, V_pore);
+        comp.computeEffectiveProperties();
+
+        cout << " Volume fraction : Fiber = " << comp.V_fiber << ", Matrix = " << comp.V_matrix;
+        if (config.hasPores) { cout << ", Pore = " << comp.V_pore; }
+        cout << endl;
+
+        // Estimations analytiques pour E3 (direction transverse/longitudinale)
+        double E3_voigt = V_fiber * fiber.E + V_matrix * matrix.E + V_pore * pore.E;
+        double E3_reuss = 1.0 / (V_fiber / fiber.E + V_matrix / matrix.E + V_pore / pore.E);
+        double E3_hill = 0.5 * (E3_voigt + E3_reuss);
+
+        cout << "\n-------- Propriétés effectives longitudinales :" << endl;
+        cout << " E3 : " << E3_voigt/1e9 << " GPa (Voigt), " << E3_reuss/1e9 << " GPa (Reuss), " << E3_hill/1e9 << " GPa (Hill)" << endl;
+
+        // Export CSV
+        string meshName = meshFile;
+        size_t start = meshName.find_last_of('/') + 1;
+        size_t end = meshName.find_last_of('.');
+        if (end == string::npos) end = meshName.size();
+        meshName = meshName.substr(start, end - start);
+        string csvFile = "results/proprietes_longitudinal_" + meshName + ".csv";
+        ofstream csv(csvFile);
+        if (!csv.is_open()) { cerr << "Impossible d'écrire: " << csvFile << "\n"; return; }
+        csv << fixed << setprecision(8);
+        csv << "Property,Voigt,Reuss,Hill\n";
+        csv << "h," << h << ",,\n";
+        csv << "E3," << E3_voigt << "," << E3_reuss << "," << E3_hill << "\n";
+        csv << "V_fiber," << comp.V_fiber << ",,\n";
+        csv << "V_matrix," << comp.V_matrix << ",,\n";
+        csv << "V_pore," << comp.V_pore << ",,\n";
+        csv << "tcpumax,0.0,\n";
+        csv.close();
+        cout << "Fichier CSV des propriétés longitudinales exporté : " << csvFile << "\n" << endl;
+    }
 }

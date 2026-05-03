@@ -4,16 +4,16 @@ test_type = composite
 
 element_type = Q1
 # Fichier de maillage
-mesh_file = mesh/composite_T/composite1_vf0.452.msh
-
+mesh_file = mesh/composite_convergence/composite1_vf0.452_10.msh
+#mesh_file = mesh/composite_T/composite3_vf0.505.msh
 dimension_scale = 1
-E = 215e9
-nu = 0.41
+E = 12e9
+nu = 0.3
 rho = 1300             # kg/m³
 
 # Matériau 2: Fibre
-E_fiber = 20e9
-nu_fiber = 0.20
+E_fiber = 34e9
+nu_fiber = 0.25
 rho_fiber = 1800   
 
 #E_pore = 1e6
@@ -21,7 +21,7 @@ rho_fiber = 1800
 #rho_pore = 10
 
 # Chargement
-F = 1000         # Force en N
+F = 1e3         # Force en N
 
 # Solveur
 precond = ic

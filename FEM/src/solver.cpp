@@ -303,7 +303,7 @@ void Solver::saveVTK(const string& filename) {
     // Notation de Voigt explicite: [xx, yy, xy]
     file << "FIELD FieldData 3\n";
 
-    file << "sigma_voigt 3 " << _mesh.nbNodes() << " double\n";
+    file << "sigma 3 " << _mesh.nbNodes() << " double\n";
     for (int i = 0; i < _mesh.nbNodes(); ++i) {
         const double sxx = nodalStress[i](0);
         const double syy = nodalStress[i](1);
@@ -311,22 +311,13 @@ void Solver::saveVTK(const string& filename) {
         file << sxx << " " << syy << " " << sxy << "\n";
     }
 
-    file << "eps_voigt 3 " << _mesh.nbNodes() << " double\n";
+    file << "eps 3 " << _mesh.nbNodes() << " double\n";
     for (int i = 0; i < _mesh.nbNodes(); ++i) {
         const double exx = nodalStrain[i](0);
         const double eyy = nodalStrain[i](1);
         const double exy = nodalStrain[i](2);
         file << exx << " " << eyy << " " << exy << "\n";
     }
-
-    file << "sigma_vm 1 " << _mesh.nbNodes() << " double\n";
-    for (int i = 0; i < _mesh.nbNodes(); ++i) {
-        const double sxx = nodalStress[i](0);
-        const double syy = nodalStress[i](1);
-        const double sxy = nodalStress[i](2);
-        file << std::sqrt(sxx*sxx - sxx*syy + syy*syy + 3.0*sxy*sxy) << "\n";
-    }
-
     file << "\n";
 
     file.close();
