@@ -3,8 +3,17 @@
 #include <cmath>
 #include <Eigen/Dense>
 #include <chrono>
+#include <filesystem>
 
 using namespace std;
+
+static string shearVtkAlias(const string& meshFile, const string& suffix) {
+    namespace fs = std::filesystem;
+    const string stem = fs::path(meshFile).stem().string();
+    const size_t cut = stem.find_first_of("_-");
+    const string prefix = (cut == string::npos) ? stem : stem.substr(0, cut);
+    return "results/" + prefix + "_" + suffix + ".vtk";
+}
 
 // TEST CISAILLEMENT PUR
 void runShearTest(const string& meshFile, const Config& config) {
@@ -16,6 +25,7 @@ void runShearTest(const string& meshFile, const Config& config) {
 // Pas de solution analytique fermée 2D: la convergence est suivie via deltaW_rel.
 void runShearTest(const vector<string>& meshFiles, const vector<double>& meshLc, const Config& config) {
     cout << "---------- CISAILLEMENT GAUSSIEN - CONVERGENCE MAILLAGE ----------" << endl;
+    const bool singleMesh = (meshFiles.size() == 1);
 
     Material material(config.E, config.nu, config.rho);
     vector<ConvergenceResult> results = runConvergence(
@@ -57,7 +67,10 @@ void runShearTest(const vector<string>& meshFiles, const vector<double>& meshLc,
             auto end = chrono::high_resolution_clock::now();
             double tcpu = chrono::duration<double>(end - start).count();
             solver.computeStrainStress();
-            solver.saveVTK(convergenceVtkPath(config, h));
+            if (singleMesh)
+                solver.saveVTK(shearVtkAlias(mfile, "shear"));
+            else
+                solver.saveVTK(convergenceVtkPath(config, h));
 
             const Eigen::VectorXd U = solver.getU();
             double uxTop = 0.0;

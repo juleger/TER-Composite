@@ -8,8 +8,17 @@
 #include <iomanip>
 #include <fstream>
 #include <chrono>
+#include <filesystem>
 
 using namespace std;
+
+static string compositeVtkAlias(const string& meshFile, const string& suffix) {
+    namespace fs = std::filesystem;
+    const string stem = fs::path(meshFile).stem().string();
+    const size_t cut = stem.find_first_of("_-");
+    const string prefix = (cut == string::npos) ? stem : stem.substr(0, cut);
+    return "results/" + prefix + "_" + suffix + ".vtk";
+}
 
 void runCompositeTest(const string& meshFile, const Config& config) {
     // Test composite transverse (original)
@@ -61,7 +70,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     double tcpu_x = chrono::duration<double>(end_x - start_x).count();
     cout << "Temps de résolution GC (traction x): " << tcpu_x << " s" << endl;
     solver.computeStrainStress();
-    solver.saveVTK("results/composite_traction_x.vtk");
+    solver.saveVTK(compositeVtkAlias(meshFile, "tracx"));
     
     // Calcul critère de rupture Tsai-Hill
     double Xt = 18e6; // Résistance traction fibres (Pa)
@@ -130,7 +139,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     Wint = solver.computeInternalEnergy();
     Wext = solver.computeExternalWork();
     dWrel = abs(Wint - Wext) / max(abs(Wint), 1e-30);
-    solver.saveVTK("results/composite_traction_y.vtk");
+    solver.saveVTK(compositeVtkAlias(meshFile, "tracy"));
     // Calcul de E2 et v21
     U = solver.getU();
     double uy_top_y = calcDisp(mesh.topNodes, 1);
@@ -169,7 +178,7 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     const double V_shear = max(L * H, 1e-30);
     // Estimation énergétique globale (diagnostic) : sensible aux énergies non-cisaillement.
     const double G12_energy = 2.0 * Wint / max(gammaTarget * gammaTarget * V_shear, 1e-30);
-    solver.saveVTK("results/composite_shear.vtk");
+    solver.saveVTK(compositeVtkAlias(meshFile, "shear"));
     U = solver.getU();
     // Déformation relative mesurée
     double gamma12 = (calcDisp(mesh.topNodes, 0) - calcDisp(mesh.bottomNodes, 0)) / max(H, 1e-30);

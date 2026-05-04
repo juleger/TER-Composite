@@ -7,7 +7,6 @@ results/
 build/
 .vscode/
 *.cmake
-rapport/
 *.aux
 *.fdb_latexmk
 *.fls

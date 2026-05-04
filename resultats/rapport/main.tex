@@ -1,0 +1,1436 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage[colorlinks,linkcolor=black,urlcolor=cyan,citecolor=cyan]{hyperref}
+\usepackage{amsmath}
+\usepackage{fancyhdr}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{tcolorbox}
+\usepackage{xcolor}
+\usepackage[french]{babel}
+
+\geometry{left=3cm,right=3cm,top=2.5cm,bottom=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    urlcolor=cyan,
+    citecolor=cyan
+}
+
+\lstset{
+    language=Fortran,
+    basicstyle=\tiny,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{gray},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    breaklines=true,
+    frame=single,
+    captionpos=b,
+    tabsize=4,
+    showstringspaces=false,
+}
+
+\begin{document}
+
+\begin{titlepage}
+    \begin{figure}
+        \centering{\includegraphics[width=0.5\linewidth]{figures/logo_em.jpg}}
+    \end{figure}
+    \begin{center}
+        \vspace*{3.5cm}
+
+        \huge \textbf{Travail d'étude et de Recherche} \\
+        Compte rendu du semestre 7
+        \vspace{1cm}
+
+        \hrulefill
+
+        \vspace{0.4cm}
+        {\Huge \textbf{Modélisation à partir d'images 2D du comportement mécanique de composites : étude à
+l'échelle des torons.}} \\
+        \vspace{0.25cm}
+        \hrulefill
+
+        \vspace{1cm}
+        \normalsize
+
+        \textbf{Auteurs :}
+        Anass Aboufadel, Iñaki Arrossagaray, Simon Francheo, Julien Léger, Jacques Nithart
+        \vspace{5cm}
+
+        \Large Année Universitaire 2025 - 2026
+
+        \vspace{1cm}
+
+        \normalsize
+        \textbf{Encadrants :}
+        Olivier Caty, Kévin Santugini
+
+        \vfill
+
+    \end{center}
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+\pagestyle{fancy}
+\fancyhead{}
+\fancyhead[L]{TER - Composite}
+\fancyhead[R]{12 Janvier 2026}
+
+
+% ===========================================================================
+\section{Matériaux composites}
+% ===========================================================================
+
+\subsection{Définition}
+
+Un matériau composite est l'assemblage intentionnel d'au moins deux constituants non miscibles à l'échelle microscopique : un renfort (fibres, tissus, particules, nids d'abeilles) et une matrice (phase continue) liés par une interface.
+L'objectif est d'obtenir des propriétés spécifiques (rigidité/masse, résistance/masse, tenue à l'environnement, fonctions) supérieures à celles de chaque constituant pris isolément.\\
+
+Rôle des constituants :
+\begin{itemize}
+    \item Renfort : porte l'essentiel des efforts (traction/cisaillement) et pilote les propriétés anisotropes via l'orientation et l'architecture .
+    \item Matrice : enrobe et transfère les charges vers le renfort, donne la forme, assure la cohésion, l'étanchéité et la tenue environnementale.
+    \item Interface : zone de contact renfort/matrice ; sa qualité conditionne la résistance au délaminage, la fatigue et la durabilité.
+\end{itemize}
+Les matrices se regroupent en trois grandes familles : organiques, céramiques et métalliques dont la nature conditionne la fenêtre de température, la tenue chimique, la masse et la mise en œuvre du composite.
+
+\begin{itemize}
+    \item Composites à matrice organique (CMO) : La matrice est une résine polymère (thermodurcissable  ou thermoplastique). Très répandus dans l'industrie grâce à leur faible densité, leurs bons rapports performance/masse et des procédés adaptés à la grande série.
+    \item Composites à matrice céramique (CMC) : La matrice est une céramique , généralement renforcée par des fibres céramiques ou de carbone. Ils sont choisis pour des environnements très chauds et agressifs, avec une meilleure tolérance aux dommages que les céramiques monolithiques ; on les utilise en propulsion, protection thermique et freins céramique-carbone.
+    \item Composites à matrice métallique (CMM) — La matrice est un métal/alliage renforcé par des particules ou fibres. Ils offrent une bonne tenue mécanique à plus haute température que les CMO et une conduction thermique/électrique intéressante, au prix d'une densité plus élevée ; utilisés pour des pièces thermomécaniques, échangeurs et applications aéro/spatiales.
+\end{itemize}
+
+% ===========================================================================
+\section{Élasticité linéaire}
+% ===========================================================================
+
+\subsection{Loi de Hooke}
+
+Généralisation matricielle de la loi de Hooke pour un petit élément de volume :
+\begin{equation}
+    [\sigma] = [C][\epsilon]
+\end{equation}
+ou :
+\begin{equation}
+    [\epsilon] = [S][\sigma]
+\end{equation}
+
+Avec $[C]$ est le tenseur de rigidité et $[S]$ le tenseur de souplesse. Leurs composantes dépendent des paramètres comportementaux des matériaux : modules de Young, coefficients de Poisson, modules de cisaillement.
+
+Pour confirmer les résultats de la simulation, il faudra parvenir à trouver ces paramètres pour la fibre et la matrice constituant le matériau étudié.
+
+Ces matrices sont simplifiables en fonction du modèle retenu : orthotrope, isotrope transverse. Le matériau semble isotrope transverse car il admet des fibres ordonnées et parallèles. Ainsi, si la direction des fibres, notée $\vec{L}$, est la direction $\vec{e_1}$ , la matrice de souplesse s'écrit sous la forme suivante dans son repère principal $(R) = (O,\vec{e_1},\vec{e_2},\vec{e_3}) = (O,L,T,T)$ :
+
+\begin{equation}
+    \mathbf{[S]}_{(R)} =
+    \left[
+    \begin{array}{cccccc}
+    \frac{1}{E_L} & -\frac{\nu_{TL}}{E_T} & -\frac{\nu_{TL}}{E_T} & 0 & 0 & 0 \\
+    -\frac{\nu_{LT}}{E_L} & \frac{1}{E_T} & -\frac{\nu_{TT}}{E_T} & 0 & 0 & 0 \\
+    -\frac{\nu_{LT}}{E_L} & -\frac{\nu_{TT}}{E_T} & \frac{1}{E_T} & 0 & 0 & 0 \\
+    0 & 0 & 0 & \frac{2(1+\nu_{TT})}{E_T} & 0 & 0 \\
+    0 & 0 & 0 & 0 & \frac{1}{G_{LT}} & 0 \\
+    0 & 0 & 0 & 0 & 0 & \frac{1}{G_{LT}}
+    \end{array}
+    \right]_{(R)}
+    \label{eq:souplesse_isotrope_transverse}
+\end{equation}
+
+avec $E_L$, $E_T$ les 2 modules de rigidité dans les directions longitudinale et transverse, $\nu_{TT}$, $\nu_{LT}$ les 2 coefficients de Poisson dans ces directions, et $G_{LT}$ le module de cisaillement dans les plans passant par l'axe d'orthotropie $\vec{e}_1$.
+
+%\subsection{Hypothèse d'un matériau isotrope}
+%\href{https://cel.hal.science/cel-00470296v1/document}{--Source de cette section}
+%
+Il est possible de faire une simplification du problème en considérant des fibres isotropes et une matrice isotrope. Cela nous donne la matrice de rigidité suivante :
+\begin{equation}
+    \mathbf{[M]}_{(R)} =
+    \left[
+    \begin{array}{cccccc}
+    C_{11}&C_{12}  & C_{12} & 0 & 0 & 0 \\
+     C_{12}&C_{11}  & C_{12} & 0 & 0 & 0 \\
+     C_{12}& C_{12} & C_{11} & 0 & 0 & 0 \\
+    0 & 0 & 0 & C_{44} & 0 & 0 \\
+    0 & 0 & 0 & 0 & C_{44} & 0 \\
+    0 & 0 & 0 & 0 & 0 & C_{44}
+    \end{array}
+    \right]_{(R)}
+\end{equation}
+avec $C_{11}=2\mu+\lambda$ , $C_{12}=\lambda$ et $C_{44}= C_{11}-C_{12}=2\mu$ , ce qui nous donne la matrice de rigidité suivante :
+
+\begin{equation}
+    \mathbf{[M]}_{(R)} =
+    \left[
+    \begin{array}{cccccc}
+    2\mu+\lambda&\lambda  & \lambda & 0 \\
+     \lambda&2\mu+\lambda  & \lambda & 0 \\
+     \lambda& \lambda & 2\mu+\lambda & 0\\
+    0 & 0 & 0 & 2\mu
+    \end{array}
+    \right]_{(R)}
+\end{equation}
+
+Les relations entre les coefficients $\lambda$, $\mu$ et $E$, $\nu$ sont :
+\begin{equation}
+2\mu = \frac{E}{1+\nu} \quad ; \quad \lambda = \frac{\nu E}{(1+\nu)(1-2\nu)}
+\end{equation}
+
+Pour un matériau isotrope $E_{xx} = E_{yy} = E$; $\nu_{xy} = \nu_{yx} = \nu$ et $G_{xy} = G$. Ainsi la matrice de souplesse s'écrit :
+\begin{equation}
+{[M]}_{(R)}=
+\begin{bmatrix}
+\dfrac{1}{E} & -\dfrac{\nu}{E} & -\dfrac{\nu}{E} & 0 & 0 & 0 \\
+-\dfrac{\nu}{E} & \dfrac{1}{E} & -\dfrac{\nu}{E} & 0 & 0 & 0 \\
+-\dfrac{\nu}{E} & -\dfrac{\nu}{E} & \dfrac{1}{E} & 0 & 0 & 0 \\
+0 & 0 & 0 & \dfrac{1}{G} & 0 & 0 \\
+0 & 0 & 0 & 0 & \dfrac{1}{G} & 0 \\
+0 & 0 & 0 & 0 & 0 & \dfrac{1}{G}
+\end{bmatrix}
+\end{equation}
+
+avec
+\[
+G = \dfrac{E}{2(1+\nu)}.
+\]
+
+\subsection{Hypothèse de Contraintes Planes}
+
+Le modèle théorique 3D présenté précédemment doit être adapté pour la simulation numérique 2D. La simulation étant réalisée sur une coupe transverse du composite, nous adoptons l'hypothèse des \textbf{Contraintes Planes} (\textit{Plane Stress}), qui suppose que les contraintes hors du plan sont nulles : $\sigma_{zz} = \sigma_{xz} = \sigma_{yz} = 0$.
+
+La matrice constitutive passe ainsi d'une taille $6 \times 6$ (cas 3D général) à une taille $3 \times 3$, ne conservant que les composantes $xx$, $yy$ et le cisaillement $xy$.
+
+\paragraph{Matériau isotrope (matrice CVI).} La loi de Hooke en contraintes planes s'écrit :
+\begin{equation}
+    [\mathbf{C}]_{\mathrm{iso}} =
+    \frac{E}{1-\nu^2}
+    \begin{bmatrix}
+    1 & \nu & 0 \\
+    \nu & 1 & 0 \\
+    0 & 0 & \dfrac{1-\nu}{2}
+    \end{bmatrix}
+    \label{eq:rigidite_isotrope_plane}
+\end{equation}
+
+\paragraph{Matériau isotrope transverse (fibres PANEX 33).} En partant de la matrice de souplesse orthotrope~(\ref{eq:souplesse_isotrope_transverse}) et en appliquant l'hypothèse des contraintes planes, la matrice de rigidité plane s'obtient par inversion analytique. En notant $\Delta = 1 - \nu_{12}\nu_{21}$ et en utilisant la relation de réciprocité de Maxwell-Betti $\nu_{21}E_1 = \nu_{12}E_2$ :
+\begin{equation}
+    [\mathbf{C}]_{\mathrm{ortho}} = [\mathbf{S}]_{\mathrm{plan}}^{-1} =
+    \frac{1}{\Delta}
+    \begin{bmatrix}
+        E_1 & \nu_{12} E_2 & 0 \\
+        \nu_{12} E_2 & E_2 & 0 \\
+        0 & 0 & G_{12}\Delta
+    \end{bmatrix},
+    \quad \Delta = 1 - \nu_{12}\nu_{21}
+    \label{eq:rigidite_ortho_plane}
+\end{equation}
+
+\subsection{Changement d'échelle}
+
+Dans \href{https://www.emse.fr/~drapier/index_fichiers/CoursPDF/Composites/Composites_SDrapier-2021.pdf}{ce document}, on trouve de quoi trouver la rigidité dans la direction des fibres, la rigidité transverse grâce à l'approximation de Reuss ou celle d'Halpin-Tsaï, ainsi que les rigidités en cisaillement plan et longitudinal.
+
+% ===========================================================================
+\section{Identification du matériau et de ses propriétés}
+% ===========================================================================
+
+La présente étude porte sur le matériau composant la tuyère de la fusée Ariane 5.
+Les tuyères de fusée sont \href{http://www.capcomespace.net/dossiers/espace_europeen/ariane/ariane5/caracteristiques.htm}{traditionnellement fabriquées} avec un composite CMC, plus précisément de type Carbon-Carbon ou C/C (selon d'autres \href{http://www.capcomespace.net/dossiers/espace_europeen/ariane/ariane5/caracteristiques.htm}{sources}, la matrice du composite pourrait inclure de la silice plutôt que du carbone). En effet, ces composites sont moins denses et thermiquement plus résistants que les CMM.
+
+Les fibres de carbone de cette matrice sont de type PANEX 33 avec un module de Young équivalent à \href{https://www.gurit.com/wp-content/uploads/2022/12/guide-to-composites-1.pdf}{228 GPa} et d'un coefficient de Poisson de \href{https://www.mdpi.com/2504-477X/5/4/96}{0.2}. Pour ce qui est de la matrice, elle est de type carbone obtenu par CVI (Chemical Vapour Infiltration), ayant comme propriété \href{https://pdf.sciencedirectassets.com/271508/1-s2.0-S0008622305X03359/1-s2.0-S0008622305001570/main.pdf}{215 GPa} pour le module de Young et 0.41 pour le coefficient de Poisson.\\
+
+Les fibres de carbone étudiées présentent la même évolution du comportement en traction lors d'essais à des températures de plus en plus élevées : la température n'a pas d'influence majeure sur leurs propriétés élastiques dans la gamme considérée.
+
+% ===========================================================================
+\section{Méthodes d'homogénéisation}
+% ===========================================================================
+
+\subsection{Introduction}
+L'homogénéisation consiste à déterminer les propriétés mécaniques effectives d'un matériau composite hétérogène à partir des propriétés de ses constituants (fibres et matrice) et de leur arrangement géométrique. Cette approche permet de passer d'une échelle microscopique (où les hétérogénéités sont visibles) à une échelle macroscopique (où le matériau peut être traité comme homogène).
+
+Il existe deux grandes familles de méthodes d'homogénéisation :
+\begin{itemize}
+    \item \textbf{Méthodes analytiques} : basées sur des modèles mathématiques simplifiés donnant des bornes ou des estimations des propriétés effectives
+    \item \textbf{Méthodes numériques} : basées sur la résolution des équations d'équilibre sur un Volume Élémentaire Représentatif (VER) discrétisé
+\end{itemize}
+
+\subsection{Méthodes d'homogénéisation analytique}
+
+\subsubsection{Hypothèse simplificatrice : matériaux isotropes}
+
+Dans un premier temps, nous considérons que la fibre et la matrice sont toutes deux isotropes. Cette hypothèse simplifie considérablement l'analyse tout en capturant les phénomènes physiques essentiels. Chaque phase $i$ est alors caractérisée par seulement deux constantes élastiques :
+\begin{itemize}
+    \item Module de Young : $E_i$
+    \item Coefficient de Poisson : $\nu_i$
+\end{itemize}
+
+Ou de manière équivalente par les coefficients de Lamé :
+\begin{equation}
+\lambda_i = \frac{\nu_i E_i}{(1+\nu_i)(1-2\nu_i)} \quad ; \quad \mu_i = \frac{E_i}{2(1+\nu_i)}
+\end{equation}
+
+où $\lambda_i$ est le premier coefficient de Lamé et $\mu_i$ est le module de cisaillement.
+
+\textbf{Remarque importante :} Dans la réalité, ni les fibres de carbone PANEX 33 ni la matrice CVI ne sont parfaitement isotropes. Les fibres présentent une forte anisotropie longitudinale/transverse, et la matrice CVI peut également présenter une texture. Cependant, cette simplification isotrope constitue une première étape nécessaire avant d'introduire progressivement la complexité du comportement anisotrope réel.
+
+\subsubsection{Loi des mélanges (règle de Voigt)}
+
+La loi des mélanges, ou borne de Voigt, suppose une déformation homogène dans tout le composite (hypothèse d'iso-déformation). Elle fournit une borne supérieure des modules effectifs.
+
+Pour un composite unidirectionnel de fraction volumique de fibres $v_f$ (et donc $v_m = 1 - v_f$ pour la matrice), le module longitudinal effectif est donné par :
+\begin{equation}
+E_L^{\text{Voigt}} = v_f E_f + v_m E_m
+\end{equation}
+
+Cette relation est exacte pour le module longitudinal d'un composite à fibres longues alignées sous chargement longitudinal. Pour le coefficient de Poisson longitudinal :
+\begin{equation}
+\nu_{LT}^{\text{Voigt}} = v_f \nu_f + v_m \nu_m
+\end{equation}
+
+\subsubsection{Borne de Reuss}
+
+La borne de Reuss suppose une contrainte homogène dans tout le composite (hypothèse d'iso-contrainte). Elle fournit une borne inférieure des modules effectifs.
+
+Pour le module transverse, la borne de Reuss s'écrit :
+\begin{equation}
+E_T^{\text{Reuss}} = \frac{E_f E_m}{v_m E_f + v_f E_m}
+\end{equation}
+
+Pour le module de cisaillement :
+\begin{equation}
+G_{LT}^{\text{Reuss}} = \frac{G_f G_m}{v_m G_f + v_f G_m}
+\end{equation}
+
+où $G_i = \frac{E_i}{2(1+\nu_i)}$ est le module de cisaillement de chaque phase.
+
+\subsubsection{Modèle d'Halpin-Tsai}
+
+Le modèle d'Halpin-Tsai est une formule semi-empirique particulièrement adaptée aux composites à fibres continues. Elle interpole entre les comportements de Voigt et Reuss.
+
+Pour le module transverse $E_T$ :
+\begin{equation}
+\frac{E_T}{E_m} = \frac{1 + \xi \eta v_f}{1 - \eta v_f}
+\end{equation}
+
+où :
+\begin{equation}
+\eta = \frac{\frac{E_f}{E_m} - 1}{\frac{E_f}{E_m} + \xi}
+\end{equation}
+
+Le paramètre $\xi$ dépend de la géométrie et du type de chargement. Pour des fibres circulaires sous chargement transverse, on utilise généralement $\xi = 2$ pour le module transverse et $\xi = 1$ pour le module de cisaillement.
+
+\subsection{Protocoles de caractérisation effective}
+\label{subsec:protocoles}
+
+Pour déterminer les propriétés mécaniques équivalentes du composite (homogénéisation), il est nécessaire d'identifier les paramètres qui régissent son comportement macroscopique. Le composite étudié étant constitué de fibres unidirectionnelles, nous supposons un comportement macroscopique orthotrope (isotrope transverse). L'identification complète du tenseur de souplesse nécessite la détermination de quatre constantes indépendantes : le module longitudinal $E_L$, le module transverse $E_T$, le coefficient de Poisson $\nu_{LT}$ et le module de cisaillement $G_{LT}$. Trois simulations doivent être réalisées sur le VER :
+
+\begin{enumerate}
+    \item \textbf{Essai de traction longitudinale} : sollicitation dans le sens des fibres, identification de $E_L$ et $\nu_{LT}$.
+    \item \textbf{Essai de traction transverse} : sollicitation perpendiculaire aux fibres, identification de $E_T$ et $\nu_{TL}$.
+    \item \textbf{Essai de cisaillement simple} : identification de $G_{LT}$.
+\end{enumerate}
+
+\subsection{Application au composite C/C étudié}
+
+Pour le composite carbone/carbone des tuyères Ariane 5 :
+\begin{itemize}
+    \item Fibres PANEX 33 : $E_f = 228$ GPa, $\nu_f = 0.2$
+    \item Matrice CVI carbone : $E_m = 215$ GPa, $\nu_m = 0.41$
+    \item Fraction volumique de fibres : $v_f$ (à déterminer à partir des images)
+\end{itemize}
+
+\textbf{Remarque :} Ces valeurs seront utilisées dans un premier temps en considérant les deux phases comme isotropes. Il sera ensuite possible d'introduire l'anisotropie des fibres et de la matrice pour obtenir des prédictions plus précises des propriétés du composite.
+\newpage
+\section{Modélisation par traitement d'image}
+Le traitement d'image constitue la première étape de la chaîne numérique automatisée. À partir d'images obtenues par microscopie électronique au LCTS du matériau composite, des techniques de vision par ordinateur sont employées pour détecter et localiser les fibres dans la matrice, fournissant ainsi les données géométriques nécessaires à la génération du maillage. L'approche classique repose sur la transformée de Hough pour cercles, qui est adaptée à la détection de fibres approximativement circulaires. Cependant, cette méthode présente des limitations en termes de robustesse face aux variations d'éclairage, aux fibres partiellement visibles en bordure de champ, et à la présence de porosités ou d'autres hétérogénéités dans la matrice. C'est pourquoi une approche plus avancée basée sur le deep learning, utilisant un réseau de neurones convolutionnels de type U-Net pour la segmentation d'images, a également été développée. Cette méthode permet une segmentation pixel par pixel, offrant une meilleure adaptabilité à la diversité des formes et des textures présentes dans les composites réels. Différentes images microscopiques sont présentées pour illustrer à la fois la forme du composite et la complexité du problème.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/img_composite.png}
+    \caption{Image originale d'un composite obtenue par microscopie électronique}
+    \label{fig:img_original}
+\end{figure}
+
+\subsection{Approche classique : transformée de Hough}
+Le processus de détection (\texttt{traitement.py}) comprend plusieurs étapes :
+
+\begin{enumerate}
+    \item \textbf{Prétraitement} : Conversion de l'image couleur en niveaux de gris, suivie d'un filtrage gaussien avec un noyau $9\times9$ et une déviation standard de 2 pixels pour réduire le bruit tout en préservant les contours des fibres.
+
+    \item \textbf{Détection de cercles} : Utilisation de la transformée de Hough pour cercles via la fonction \texttt{cv2.HoughCircles} d'OpenCV. Les paramètres sont ajustés pour détecter des cercles avec des rayons compris entre 40 et 50 pixels, correspondant à la taille des fibres dans l'image.
+
+    \item \textbf{Validation et sauvegarde} : Les cercles détectés sont validés visuellement et leurs paramètres (coordonnées $x$, $y$ du centre et rayon) sont sauvegardés dans le fichier \texttt{cercles.txt}.
+\end{enumerate}
+
+Pour l'image présentée en Figure~\ref{fig:img_original}, la détection automatique grâce à la transformée de Hough a permis d'identifier 28 fibres :
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{figures/detected_circles.png}
+    \caption{Détection automatique des 28 fibres (cercles verts avec centres rouges) sur l'image du composite}
+    \label{fig:detected_circles}
+\end{figure}
+
+La détection s'avère satisfaisante, avec une localisation précise des centres et des rayons des fibres. Au niveau des bords de l'image, certaines fibres sont partiellement visibles, ce qui entraîne une détection incomplète. On compte environ 5 faux positifs et 2 faux négatifs. En retirant les détections de bord, on obtient 1 seul faux positif.
+
+\subsubsection{Génération depuis la détection Hough}
+
+La génération automatique du maillage constitue l'étape intermédiaire cruciale reliant l'analyse d'image à la simulation numérique. Le script Python \texttt{maillage.py} lit les coordonnées des fibres détectées dans le fichier \texttt{cercles.txt} et crée un fichier géométrique Gmsh (.geo) décrivant la géométrie du VER. Le processus comprend la lecture des données, la gestion des systèmes de coordonnées (OpenCV : origine en haut à gauche ; Gmsh : origine en bas à gauche), la construction géométrique des surfaces, l'assignation des tags physiques et l'optimisation du paramètre de raffinement (\texttt{lc}).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{figures/mesh.png}
+    \caption{Maillage généré automatiquement depuis la détection Hough : 14\,240 éléments triangulaires avec fibres (noir) dans matrice (bleu)}
+    \label{fig:mesh}
+\end{figure}
+
+Le maillage final comprend 6\,673 nœuds et 14\,240 éléments triangulaires, avec des contours nets pour les fibres et un maillage uniforme pour la matrice.
+
+% -------------------------------------------------------------------
+\subsubsection{Limites de l'approche classique et motivation pour le deep learning}
+% -------------------------------------------------------------------
+
+L'approche par transformée de Hough repose sur une hypothèse forte : les fibres sont approximativement circulaires et leurs rayons sont connus à l'avance (40--50 pixels dans l'image considérée). Cette contrainte paramétrique rend la méthode sensible aux variations d'éclairage, aux fibres partiellement visibles en bordure de champ, et surtout à la présence de porosités ou d'autres hétérogénéités dans la matrice. \\
+
+La transformée de Hough ne fournit qu'une détection binaire fibre/non-fibre et ne permet pas de segmenter les porosités. De plus, pour des images présentant des fibres à géométrie irrégulière, des sections elliptiques dues à l'angle de coupe, ou des amas de fibres jointives, la robustesse de la méthode géométrique se dégrade fortement. Dans les images obtenues au LCTS, on observe une grande diversité de formes et de textures, avec des fibres parfois partiellement fusionnées, des porosités de tailles variées, et un contraste non uniforme. Parfois, les fibres sont plus fonçées que la matrice selon la polarisation, mais dans d'autres cas, les fibres peuvent être plus claires ou présenter des variations de luminosité. En particulier, dans le cas transversal, la détection des fibres est particulièrement difficile à cause de la polarisation de l'image, qui présente une interphase fibre-matrice qui se mélange avec les fibres elles-mêmes. \\
+
+\subsection{Approche deep learning : segmentation U-Net}
+\label{subsubsec:unet}
+
+\subsubsection{Principe général}
+
+L'apprentissage supervisé est une branche du machine learning où un modèle apprend à faire des prédictions à partir d'exemples étiquetés. Dans le contexte de la segmentation d'images, cela signifie que le modèle reçoit en entrée une image et doit produire une carte de segmentation où chaque pixel est classé dans une catégorie (par exemple, fibre, matrice ou porosité). Cela demande un jeu de données d'entraînement constitué d'images annotées manuellement. Cependant, une fois entraîné, le modèle peut généraliser à de nouvelles images non vues, ce qui en fait un outil puissant pour l'analyse de microstructures complexes. Les méthodes traditionnelles (Hough, seuillage, etc.) sont souvent limitées par des hypothèses géométriques strictes et ne peuvent pas capturer la diversité des formes et des textures présentes dans les composites réels. En revanche, les réseaux de neurones convolutionnels (CNN) comme le U-Net sont capables d'apprendre des représentations hiérarchiques et de capturer à la fois le contexte global et les détails locaux, à condition d'avoir suffisamment de données d'entraînement et d'une architecture adaptée. \\
+
+Dans un réseau de neurones, les données d'entrée (images) sont transformées à travers une série de couches (convolutions, activations, normalisations, etc.) pour produire une sortie (carte de segmentation). L'entraînement du réseau consiste à ajuster les poids de ces couches pour minimiser une fonction de perte qui mesure l'écart entre les prédictions du modèle et les étiquettes de vérité terrain. Pour entraîner un réseau comme celui-ci, on utilise un ensemble d'images annotées, que l'on divise généralement en un ensemble d'entraînement (pour ajuster les poids) et un ensemble de validation (pour évaluer la performance du modèle sur des données non vues). L'optimisation est souvent réalisée par des algorithmes de descente de gradient, qui mettent à jour les poids du réseau en recherchant le minimum de la fonction de perte. \\
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{figures/architecture.png}
+    \caption{Architecture du U-Net proposée par Ronneberger et al. (2015) pour la segmentation d'images médicales}
+    \label{fig:unet_architecture}
+\end{figure}
+
+Le U-Net est une architecture spécifique conçue pour la segmentation d'images, proposée initialement par Ronneberger et al. en 2015. Elle est caractérisée par un chemin descendant (encodeur) qui capture le contexte global et un chemin ascendant (décodeur) qui restaure la résolution spatiale, avec des connexions directes (skip connections) entre les deux pour préserver les détails fins. L'approche par U-Net remplace une détection purement géométrique par une segmentation pixel par pixel. Chaque pixel de l'image est classé dans l'une des trois catégories utiles au projet : matrice (classe 0), fibre (classe 1) ou porosité (classe 2). Cette formulation est beaucoup mieux adaptée à une microstructure réelle que la transformée de Hough, car elle ne suppose ni des fibres parfaitement circulaires, ni un rayon connu à l'avance. L'encodeur compresse progressivement l'image en extrayant les features à plusieurs échelles, tandis que le décodeur remonte en résolution pour produire une carte de segmentation fine.
+
+\subsubsection{Architecture du réseau}
+
+L'architecture du U-Net implanté dans ce projet est relativement classique, avec quelques adaptations pour le contexte spécifique de la segmentation de composites. Le réseau prend en entrée une image en niveaux de gris (1 canal) et produit en sortie une carte de segmentation à 3 canaux (un par classe). Ce genre de réseau utilise des blocs de convolution successifs pour extraire les features (textures, formes, contrastes) à différentes échelles, avec des opérations de pooling (sous-échantillonnage) pour réduire la résolution et des convolutions transposées pour la remonter.
+
+Un bloc de convolution double (DoubleConv) représente l'unité de base, composée de deux convolutions successives avec normalisation de batch et activation ReLU. L'encodeur comprend quatre blocs DoubleConv avec des filtres de dimensions croissantes \([32, 64, 128, 256]\), suivis d'un goulot d'étranglement à 512 filtres. Le décodeur remonte par convolutions transposées $2\times2$ en alternance avec des blocs DoubleConv, inversant l'ordre des nombres de filtres. Finalement, une convolution $1\times1$ réduit les 32 canaux de sortie du décodeur à 3 canaux correspondant aux classes. \\
+
+\subsubsection{Structure du code}
+
+L'implémentation du U-Net est réalisée en Python orienté objet avec PyTorch, une bibliothèque de deep learning populaire pour sa flexibilité et sa facilité d'utilisation. Le code est organisé dans un fichier python \texttt{segmentation.py}, qui contient la définition de l'architecture du réseau, la construction du jeu de données, les fonctions d'entraînement et d'inférence. Les différentes classes et fonctions sont décrites ci-dessous :
+
+\begin{itemize}
+    \item \texttt{DoubleConv} : bloc de base du réseau, composé de deux convolutions successives suivies de normalisation de batch et d'une activation ReLU. Ce bloc est utilisé à la fois dans l'encodeur et le décodeur pour extraire des features à différentes échelles.
+    \item \texttt{UNet} : classe principale qui définit l'architecture complète du réseau, avec les couches d'encodeur, de décodeur et les skip connections. Elle implémente la méthode \texttt{forward} pour la propagation avant des données à travers le réseau. 
+    \item \texttt{PatchDataset} : classe dérivée de \texttt{torch.utils.data.Dataset} qui gère la construction du jeu de données à partir des images annotées. Elle extrait aléatoirement des patchs de taille $256\times256$ pixels, applique les augmentations de données, et retourne les paires (image, masque) prêtes pour l'entraînement.
+    \item \texttt{train} : fonction qui orchestre le processus d'entraînement du réseau, en itérant sur les époques, en calculant la perte et les métriques de performance, et en ajustant les poids du modèle.
+    \item \texttt{predict\_image} : fonction qui applique le modèle entraîné à une nouvelle image, en utilisant une stratégie de fenêtre glissante pour gérer les images de grande taille.
+\end{itemize}
+
+La bibliothèque PyTorch prendre en charge facilement les architectures de réseaux, gère les opérations de convolution, de normalisation et d'activation, et implémente les boucles d'entraînement avec rétropropagation. Cela permet de se focaliser sur la conception de l'architecture et la gestion du jeu de données. De plus, l'utilisation de GPU avec CUDA est facilitée pour accélérer l'entraînement du modèle, ce qui est crucial pour les réseaux de neurones profonds.
+
+\subsubsection{Construction du jeu de données}
+
+Les données d'apprentissage proviennent des multiples images de microscopie polarisées, que nous avons acquises au LCTS. Parmi ces images, une partie a été annotée manuellement pour créer des masques de vérité terrain, où chaque pixel est étiqueté comme appartenant à la matrice, à une fibre ou à une porosité. Bien que cela paraisse fastidieux à première vue, des outils comme \texttt{Labelme} implémentent des fonctionnalités d'annotation semi-automatique (remplissage intelligent...) et de détection de polygones, ce qui accélère considérablement le processus. Au total, 17 images sur les 46 disponibles ont été annotées, fournissant un jeu de données d'entraînement suffisant pour le réseau. Ces images annotées couvrent une diversité de microstructures, avec des fibres de différentes tailles, des porosités variées et des contrastes différents, ce qui est crucial pour la généralisation du modèle. \\
+
+Labelme permet d'obtenir le fichier JSON d'annotation, qui est ensuite converti en masque de segmentation binaire (matrice de même taille que l'image, avec des valeurs entières correspondant aux classes). Ces masques sont stockés dans le dataset sous la forme \texttt{label.png} associé à chaque image d'entrée \texttt{image.png}. Ce sont ces paires (image, masque) qui sont utilisées pour entraîner le U-Net à apprendre à segmenter les images de microscopie en trois classes distinctes. Seulement, 17 images annotées pour de la segmentation d'images complexes est faible, et peut mener à un sur-apprentissage, c'est-à-dire que le modèle apprend à mémoriser les images d'entraînement plutôt qu'à généraliser à de nouvelles images. C'est pourquoi il est nécessaire dans un premier temps de densifier le jeu de données en découpant les images en patchs plus petits, et dans un second temps d'appliquer des augmentations de données pour simuler une plus grande diversité d'exemples.
+
+\paragraph{Stratégie de patch et densification du jeu.}
+
+La classe \texttt{PatchDataset} extrait aléatoirement de nombreux patchs de taille $256\times 256$ pixels pour chaque image source. Cette stratégie de densification locale permet plusieurs avantages : elle réduit la taille des données chargées en mémoire lors de l'entraînement, elle augmente le nombre d'échantillons effectifs disponibles pour l'optimiseur, et elle force le réseau à apprendre des features invariantes localement. Le code définit \texttt{PATCHES\_PER\_IMAGE = 256}, ce qui signifie que chaque image source contribue $256$ patchs indépendants au jeu de données.
+
+Une séparation 80/20 est ensuite appliquée entre apprentissage et validation : $80\%$ des images sources sont utilisées pour l'apprentissage, $20\%$ pour la validation. C'est une pratique très standard en machine learning, qui permet de mesurer la capacité du modèle à généraliser à des données non vues pendant l'entraînement. La validation est effectuée à l'échelle des images sources, ce qui signifie que les patchs extraits d'une même image ne sont pas partagés entre apprentissage et validation, évitant ainsi les fuites de données.
+
+\paragraph{Augmentation de données.}
+
+L'augmentation des données est une technique cruciale pour améliorer la généralisation du modèle, surtout lorsque le nombre d'exemples annotés est limité. Le principe est simple : on applique de manière aléatoire des transformations géométriques et photométriques aux patchs d'entraînement, créant ainsi des variantes synthétiques de chaque exemple. Cela permet au modèle d'apprendre à être invariant à ces transformations, ce qui est essentiel pour la segmentation de microstructures réelles où les fibres peuvent être orientées de différentes façons, les contrastes peuvent varier, et les artefacts de bruit sont fréquents. Une probabilité d'application de 50\% est généralement utilisée pour chaque transformation, ce qui signifie que chaque patch a une chance égale d'être transformé ou non, créant ainsi une diversité équilibrée dans le jeu de données. Les transformations appliquées sont les suivantes, avec des probabilités d'application indiquées entre parenthèses :
+\begin{itemize}
+    \item Retournements horizontal et vertical (50\%),
+    \item Rotations multiples de $90^\circ$ (50\%),
+    \item Rotations continues dans l'intervalle $[-15^\circ, +15^\circ]$ (50\%),
+    \item Déformations élastiques (50\%),
+    \item Variation de contraste (50\%),
+    \item Correction gamma (50\%),
+    \item Flou gaussien (60\%),
+    \item Inversion des niveaux de gris (50\%).
+\end{itemize}
+
+Toutes ces transformations visent à simuler la diversité des conditions d'imagerie et des microstructures possibles, forçant le réseau à apprendre des features robustes et généralisables. Cela est particulièrement important dans notre cas, où les fibres peuvent être orientées de manière aléatoire, les porosités peuvent varier en taille et en forme, et les images peuvent présenter des artefacts de bruit ou de contraste. Dans ce cas, en comptant l'augmentation des données et le découpage en patch, on obtient à partir de 17 images annotées un jeu de données effectif de plusieurs centaines de milliers de patchs.
+
+\subsubsection{Entraînement et inférence}
+
+L'apprentissage du réseau minimise une fonction de perte d'entropie croisée catégorielle, qui compare les logits prédits (sorties non-normalisées du réseau) aux étiquettes de vérité terrain. La perte est définie pour chacun des $256\times256$ pixels de chaque patch, ce qui signifie que le réseau apprend à classer chaque pixel individuellement. \\
+
+La métrique d'intersection over union (IoU) est utilisée pour évaluer la performance du modèle pendant l'entraînement. L'IoU mesure le chevauchement entre la segmentation prédite et la vérité terrain pour chaque classe, et est particulièrement adaptée pour les tâches de segmentation où les classes peuvent être déséquilibrées (par exemple, les porosités peuvent être rares par rapport aux fibres). L'IoU moyen sur les classes présentes dans chaque lot est suivi à chaque époque, permettant de mesurer l'amélioration de la segmentation au fil de l'entraînement. \\
+
+Pour l'entraînement, on parle d'époque pour désigner un passage complet à travers l'ensemble du jeu de données d'entraînement. C'est-à-dire qu'à chaque époque, le modèle ajuste ses poids en fonction de tous les patchs d'entraînement, ce qui permet une convergence progressive vers une solution optimale (qui minimise la fonction de perte). Dans notre cas, on fixe le nombre d'époques à $100$, on garde la possibilité de stopper l'entraînement plus tôt si la validation ne s'améliore plus (early stopping), ce qui permet d'éviter le sur-apprentissage. Pour chaque époque, des données comme la perte d'entropie croisée et l'IoU moyen sont enregistrées pour les ensembles d'entraînement et de validation, ce qui permet de tracer des courbes d'apprentissage et de diagnostiquer le comportement du modèle (par exemple, divergence, sur-apprentissage, sous-apprentissage).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.05\textwidth]{figures/training_curves.png}
+    \caption{Courbes d'entraînement du réseau U-Net. La décroissance de la perte et la stabilisation de l'IoU indiquent que le modèle apprend une segmentation robuste sans divergence entre apprentissage et validation.}
+    \label{fig:training_curves}
+\end{figure}
+
+L'entraînement à été arrêté à l'époque 80 et a duré environ 30 minutes sur GPU NVIDIA RTX 4060, ce qui est raisonnable pour ce type de projet. Les courbes d'entraînement montrent une décroissance régulière de la perte d'entropie croisée (vers 0.05 environ) et une stabilisation de l'IoU vers 0.92, indiquant que le modèle apprend une segmentation robuste sans divergence entre apprentissage et validation. La partie validation présente plus de variabilité surtout au début de l'entraînement, ce qui est normal compte tenu du nombre limité d'images de validation, mais elle converge vers une performance similaire à celle de l'entraînement. \\
+
+L'early stopping se justifie par le fait que la validation ne s'améliore plus significativement après l'époque 70, ce qui suggère que le modèle a atteint une performance optimale sur les données disponibles. A la fin de cet entraînement, les poids du modèle sont sauvegardés dans un fichier \texttt{unet\_weights.pth}, qui peut être chargé ultérieurement pour faire de l'inférence sur de nouvelles images.
+
+\paragraph{Stratégie d'inférence}
+
+Lors de l'inférence sur une nouvelle image, celle-ci est potentiellement beaucoup plus grande que la taille du patch d'entraînement ($256\times256$). Le code applique donc une stratégie de fenêtre glissante avec vote accumulé (sliding window with voting). Une fenêtre de $256\times256$ est déplacée sur l'image avec un pas (stride) de $192$ pixels, permettant un recouvrement de $64$ pixels entre fenêtres consécutives. Pour chaque fenêtre, le réseau produit un tenseur de probabilités de forme $3 \times 256 \times 256$ (trois canaux pour les trois classes). Ces probabilités sont accumulées dans une carte de votes globale, et le nombre de votes reçu par chaque pixel est enregistré. Finalement, la classe gagnante pour chaque pixel est déterminée par argmax sur la carte de votes normalisée. \\
+
+Cette stratégie a plusieurs avantages : elle réduit les artefacts de bord qui peuvent apparaître quand on traite une image entière d'une fois, elle permet de traiter des images de tailles arbitraires sans modifier le réseau, et le recouvrement et la fusion par vote améliorent la robustesse aux erreurs locales. Différents résultats de prédiction sont présentés pour illustrer la qualité de la segmentation obtenue par le U-Net, avec une distinction claire entre les fibres, la matrice et les porosités.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/1_segmented.png}
+    \includegraphics[width=0.75\textwidth]{figures/30_segmented.png}
+    \caption{Inférence U-Net sur deux images, avec à gauche l'image originale et à droite la segmentation. La première image montre des fibres circulaires, le second des fibres elliptiques.}
+    \label{fig:segmentation_results}
+\end{figure}
+
+Que ce soit dans le cas de fibres circulaires ou elliptiques/longitudinales, la segmentation par U-Net est très satisfaisante, avec une délimitation nette des fibres, une bonne distinction entre les classes, et une détection efficace des porosités. La qualité de la segmentation est nettement supérieure à celle obtenue par la transformée de Hough, notamment dans les zones où les fibres sont partiellement visibles ou où les porosités sont présentes. Il n'y a pas besoin de régler manuellement des paramètres de rayon ou de seuil, ce qui rend l'approche plus robuste et plus adaptable à différentes images. \\
+
+La détection de fibres elliptiques/longitudinales est la réelle amélioration, car elle ouvre la voie à l'analyse des propriétés dans la direction longitudinale des fibres. La segmentation est également plus précise pour les fibres partiellement visibles en bordure de champ, qui étaient problématiques pour la transformée de Hough. Même dans le cas transverse, la forme des fibres est bien mieux capturée (pas réellement circulaire) et n'est pas confondue avec l'interphase fibre-matrice. La détection des porosités est très satisfaisante, mais dépend beaucoup de ce que l'on a annoté comme porosité dans le train set. Dans notre cas, nous avons retiré les images avec des fibres arrachées, car trop difficile à annoter avec 3 classes, nous n'avons pas non plus annoté les décollements d'interphase car trop loin pour ce projet, mais cela resterait possible grâce à la puissance du U-Net. Ce modèle échoue cependant pour les images à grande échelle, qui ne s'inscrivent pas dans ce projet qui est à l'échelle des torons.
+
+\paragraph{Comparaison qualitative : Hough vs U-Net.}
+
+Le tableau suivant résume les principales différences entre les approches Hough et U-Net pour la modélisation par traitement d'image du composite C/C.
+\begin{table}[H]
+    \centering
+    \caption{Comparaison des deux approches de traitement d'image pour le composite C/C.}
+    \label{tab:comparaison_methodes}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{Critère} & \textbf{Hough} & \textbf{U-Net} \\
+        \midrule
+        Qualité de segmentation & Moyenne & Excellente \\
+        Hypothèse géométrique & Cercles de rayon fixe & Aucune \\
+        Détection des porosités & Non & Oui \\
+        Détection de fibres elliptiques & Non & Oui \\
+        Adaptabilité à différentes images & Faible & Élevée \\
+        Paramétrisation manuelle & Très élevée & Aucune \\
+        Données annotées requises & Non & Oui \\
+        Entraînement nécessaire & Non & Oui (30 min sur GPU) \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+L'U-Net est supérieur à la transformée de Hough sur tous les critères qualitatifs, mais est beaucoup plus difficile à implémenter, nécessite un jeu de données annoté et un temps d'entraînement. C'est ce modèle qui est retenu pour la suite du projet.
+\subsection{Génération de maillage à partir de segmentation U-Net}
+\label{subsubsec:maillage_unet}
+
+Une fois la segmentation obtenue par le U-Net, il est nécessaire de convertir la carte de segmentation en un maillage exploitable pour les simulations EF. Le script \texttt{mesh.py} réalise cette conversion en plusieurs étapes, depuis le post-traitement du masque jusqu'à la génération du fichier Gmsh (.msh) avec les éléments finis correspondants. Le traitement via Hough permettait d'obtenir une géometrie Gmsh, ce qui permettait de faire rapidement un maillage avec les algorithmes du logiciel. En revanche, la segmentation par U-Net produit un masque pixelisé, qui ne peut pas être directement utilisé pour faire un maillage de qualité. Cela nous force à implémenter un maillage structuré qui se base sur la nature de la segmentation (pixels) plutôt que sur une géométrie continue.
+
+\paragraph{Post-traitement du masque.}
+
+Le masque brut obtenu par inférence du U-Net est relu et éventuellement sous-échantillonné par un facteur \texttt{downscale}, où chaque pixel du masque final correspond à un bloc de pixels du masque original. Ce paramètre contrôle le compromis fondamental entre fidélité géométrique et coût computationnel : un sous-échantillonnage agressif réduit le nombre d'éléments et accélère les calculs EF, mais au prix d'une géométrie moins fidèle. Les images ayant des dimensions de l'ordre de $2000\times2000$ pixels, cela amenerait à plus de 4 millions d'éléments à traiter sans downscale. Un deuxième paramètre, \texttt{min\_size}, pilote le nettoyage morphologique appliqué au masque sous-échantillonné. Ce nettoyage est réalisé via \texttt{skimage.morphology} et comprend les opérations suivantes :
+\begin{itemize}
+    \item Suppression des petits objets (petites porosités ou fragments de fibres).
+    \item Comblement des petits trous intérieurs au sein des fibres
+    \item Ouverture morphologique spécifique sur les fibres pour éliminer les connexions interfibres.
+\end{itemize}
+
+\paragraph{Conversion pixel-vers-élément et choix du type d'élément.}
+
+Une fois le masque nettoyé et éventuellement sous-échantillonné, chaque pixel du masque final est ensuite transformé en élément Gmsh. Le format msh 2.2 est généré directement par le code. Deux modes sont proposés : 
+\begin{itemize}
+    \item Mode \texttt{quad} : un pixel devient un quadrilatère (Q1). Maillage structuré facile à implémenter 
+    \item Mode \texttt{tri} : chaque pixel est découpé en deux triangles selon un damier alterné. Deux fois plus d'éléments que le mode quadrilatère, mais meilleure représentation de la géométrie avec optimisation du damier.
+\end{itemize}
+
+Les tags physiques (identifiants de région) sont repris directement du masque : chaque pixel reçoit un tag correspondant à sa classe (0 = matrice, 1 = fibre, 2 = porosité). Cela crée automatiquement trois domaines physiques distincts dans le fichier Gmsh, ce qui simplifie ensuite l'affectation des propriétés matériaux dans le solveur EF. Dans toute la suite du code, on privilégie le mode quadrilatère, qui est plus rapide à générer et à traiter que les triangles, et qui est suffisant pour la qualité de segmentation obtenue par le U-Net. Le mode triangulaire structuré est plus coûteux en éléments et nécessite encore plus d'optimisation pour mieux représenter la géométrie. \\
+
+Le passage à une géometrie non structurée de triangles par exemple comme avec Hough nécessite d'implémenter un algorithme de triangulation (Delaunay) à partir de la segmentation, ce qui est extrêmement complexe, car il faut extraire les contours des fibres, les convertir en polygones, gérer les intersections, et faire un maillage de qualité à partir de ces polygones. \\
+
+Le code éléments finis du S7 qui gérait à la base des éléments triangulaires (P1) non structuré, a donc été adapté pour pouvoir gérer des éléments quadrilatères (Q1) structurés, ce qui est plus simple à implémenter et à traiter. Ici, la dimension maximale du maillage est normalisée à 1 unité, ce qui ne prend pas en compte l'échelle physique réelle du composite, ce qui n'est pas un problème comme on travaille en élasticité linéaire. 
+
+Une pipeline \texttt{main.py} gère l'ensemble du processus : lecture de l'image, segmentation U-Net, post-traitement, génération du maillage Gmsh. Pour la première image de composite présentée dans la segmentation, on affiche sur \texttt{Paraview} le maillage généré pour un downscale de 5 et 15, pour illustrer l'impact du paramètre de sous-échantillonnage sur la fidélité géométrique et le nombre d'éléments générés.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/mesh1_downscale5.png}
+    \includegraphics[width=0.48\textwidth]{figures/mesh1_downscale15.png}
+    \caption{Maillage généré à partir de la segmentation U-Net pour un downscale de 5 (en haut) et 15 (en bas). 125563 éléments pour le downscale 5, 13872 pour le downscale 15.}
+    \label{fig:mesh_downscale}
+\end{figure}
+
+
+\newpage
+\section{Implémentation numérique des éléments finis}
+% =============================================================================
+
+\subsection{Méthode des éléments finis pour l'élasticité linéaire}
+
+\subsubsection{Formulation variationnelle}
+La méthode des éléments finis permet de résoudre numériquement des EDP ellipitiques en approximant l'espace des solutions par des fonctions de forme définies localement sur un maillage du domaine. Cette méthode est particulièrement adaptée pour traiter les problèmes d'élasticité linéaire. Partons de l'équation d'équilibre local dans un domaine solide élastique :
+
+\begin{equation}
+\nabla \cdot \boldsymbol{\sigma} + \mathbf{f} = 0 \quad \text{dans } \Omega,
+\end{equation}
+où $\boldsymbol{\sigma}$ est le tenseur des contraintes, $\mathbf{f}$ représente les forces volumiques (négligées ici), et $\Omega$ est le domaine de la structure. La loi de comportement linéaire relie les contraintes aux déformations par une relation linéaire :
+
+\begin{equation}
+\boldsymbol{\sigma} = \mathbf{C}\,\boldsymbol{\varepsilon},
+\end{equation}
+ 
+où $\mathbf{C}$ est la matrice de rigidité (ou matrice de comportement) qui dépend des propriétés du matériau, et $\boldsymbol{\varepsilon}$ est le tenseur des déformations, défini à partir du champ de déplacement $\mathbf{u}$ par :
+\begin{equation}
+\boldsymbol{\varepsilon} = \frac{1}{2}(\nabla \mathbf{u} + \nabla \mathbf{u}^\top).
+\end{equation}
+
+Dans un plan d'isotropie, la matrice de rigidité $\mathbf{C}$ est définie par le module de Young $E$ et le coefficient de Poisson $\nu$. \\
+
+On impose des conditions aux limites de Dirichlet (déplacements prescrits) sur une partie du bord $\Gamma_D$ et des conditions de Neumann (forces imposées) sur une autre partie du bord $\Gamma_N$. Sous forme variationnelle, le problème d'élasticité linéaire s'écrit alors : trouver $\mathbf{u} \in V$, tel que pour tout $\mathbf{v} \in V$,
+
+\begin{equation}
+\int_\Omega \boldsymbol{\varepsilon}(\mathbf{v}) : \mathbf{C} : \boldsymbol{\varepsilon}(\mathbf{u})\,\mathrm{d}\Omega = \int_{\Gamma_N} \mathbf{v} \cdot \mathbf{f_{surf}}\,\mathrm{d}\Gamma,
+\end{equation}
+
+où $V$ est l'espace des fonctions tests (admissibles) et $\mathbf{f_{surf}}$ la force appliquée sur le bord de Neumann. En discretisant l'espace $V$ par des fonctions de forme associées à un maillage d'éléments finis, on obtient un système linéaire de la forme :
+
+\begin{equation}
+\mathbf{K}\mathbf{U} = \mathbf{F},
+\end{equation}
+
+où $\mathbf{K}$ est la matrice de rigidité globale (creuse, symétrique, définie positive), $\mathbf{U}$ est le vecteur des déplacements nodaux (2 DDL par nœud), et $\mathbf{F}$ est le vecteur des forces nodales. 
+
+\subsubsection{Assemblage et conditions aux limites}
+La matrice $\mathbf{K}$ est assemblée à partir des matrices élémentaires
+\[
+\mathbf{K}_e = \int_{\Omega_e} \mathbf{B}^\top \mathbf{C}\mathbf{B}\,\mathrm{d}\Omega,
+\]
+où $\mathbf{B}$ est la matrice de déformation qui relie les déplacements nodaux aux déformations élémentaires, et $\mathbf{C}$ est la matrice constitutive locale. L'assemblage global consiste à sommer les contributions de chaque élément en respectant la connectivité du maillage. Il faut donc avoir une bonne organisation des données, entre les indices locaux (au sein de chaque élément) et les indices globaux (dans le système linéaire). \\
+
+Les conditions aux limites de Dirichlet sont appliquées en modifiant la matrice $\mathbf{K}$ et le vecteur $\mathbf{F}$ pour imposer les déplacements prescrits. Par exemple, pour un nœud $i$ avec un déplacement prescrit $u_i = u_i^*$, on peut remplacer la ligne correspondante dans $\mathbf{K}$ par une ligne de l'identité et ajuster le vecteur $\mathbf{F}$ en conséquence ($F_i = u_i^*$). Les conditions de Neumann sont d'autant plus simples à appliquer, car elles nécessitent simplement d'ajouter les contributions de la force de surface aux entrées correspondantes du vecteur $\mathbf{F}$.
+
+\subsubsection{Éléments P1}
+
+Dans ce projet, nous avons implémenté deux types d'éléments finis : les triangles linéaires (P1) et les quadrilatères bilinéaires (Q1). Les éléments P1 sont composés de trois nœuds aux sommets du triangle, avec une interpolation linéaire des déplacements. Lorsque le maillage de triangle n'est pas structuré, la matrice de rigidité élémentaire est d'abord calculée pour un triangle de référence, et ensuite transformée pour chaque élément du maillage en fonction de sa géométrie spécifique. On a alors :
+
+\begin{equation}
+\mathbf{K}_e = \int_{\Omega_e} \mathbf{B}^\top \mathbf{C}\mathbf{B}\,\mathrm{d}\Omega = \int_{\hat{\Omega}} \mathbf{B}^\top \mathbf{C}\mathbf{B}\,|\mathbf{J}|\,\mathrm{d}\hat{\Omega},
+\end{equation}
+où $\hat{\Omega}$ est le triangle de référence, $\mathbf{J}$ est la matrice jacobienne de la transformation géométrique, et l'intégration est effectuée numériquement par quadrature de Gauss. La matrice $\mathbf{B}$ est constante sur l'élément, ce qui simplifie le calcul de la matrice de rigidité élémentaire.
+
+\subsubsection{Éléments Q1}
+
+Dans notre cas, les éléments quadrilatères (Q1) sont majoritairement utilisés, car ils sont plus adaptés au maillage structuré généré à partir de la segmentation U-Net. Les éléments Q1 ont quatre nœuds aux coins du quadrilatère, avec une interpolation bilinéaire des déplacements. La matrice de rigidité élémentaire pour les éléments Q1 est calculée de manière similaire à celle des éléments P1, mais l'intégration doit être effectuée sur le carré de référence $[-1,1]^2$ en utilisant une transformation isoparamétrique. La matrice $\mathbf{B}$ varie linéairement sur l'élément, ce qui nécessite une intégration numérique plus précise (par exemple, quadrature de Gauss à 2 points par direction). \\
+
+\subsubsection{Résolution du système linéaire}
+
+Le système linéaire résultant est ensuite résolu à l'aide d'un solveur itératif adapté aux systèmes creux, symétriques et définis positifs, tel que le Conjugate Gradient. Un préconditionneur comme le Cholesky incomplet peut être utilisé pour accélérer la convergence. La solution obtenue permet de calculer les déplacements nodaux, à partir desquels on peut dériver les contraintes et les déformations dans chaque élément, et ainsi analyser le comportement mécanique du composite.
+
+\subsection{Architecture du code éléments finis}
+
+Le code éléments finis est implémenté en C++ pour des raisons de performance, avec une organisation modulaire et orientée objet. La programmation orientée objet permet de structurer le code de manière claire et extensible, en encapsulant les différentes fonctionnalités dans des classes dédiées, ce qui est particulièrement important pour un projet de cette envergue. Les différentes parties du code sont présentées ci-dessous, avec une description de leur rôle et de leur interaction.
+\subsubsection{Gestionnaire de configuration}
+
+La classe \texttt{Config} centralise tous les paramètres des simulations :
+\begin{itemize}
+    \item Type de test (\texttt{testType}) : \textit{``composite''}, \textit{``traction''}, \textit{``flexion''} ou \textit{``shear''}, les trois derniers étant dans des cas homogènes
+    \item Fichier de maillage Gmsh (\texttt{meshFile}) : chemin vers le fichier .msh généré à partir de la segmentation U-Net,
+    \item Type d'élément fini (\texttt{elementType}) : P1 (triangle linéaire) ou Q1 (quadrilatère bilinéaire),
+    \item Propriétés des matériaux : module de Young $E$, coefficient de Poisson $\nu$, pour matrice, fibres, et éventuellement porosités,
+    \item Support optionnel des porosités (troisième matériau si \texttt{hasPores == true}),
+    \item Paramètres du solveur : tolérance de convergence, nombre d'itérations maximum, type de préconditionnneur (Cholesky incomplet, diag, id),
+    \item Paramètres d'exportation des résultats : format de sortie (Paraview, CSV), etc...
+\end{itemize}
+
+Cette architecture permet de charger tous les paramètres depuis un fichier texte simple, typiquement \texttt{config/composite.txt}, sans recompiler le code.
+
+\subsubsection{Maillage et géométrie}
+
+La classe \texttt{MeshReader} est responsable de l'interprétation des fichiers Gmsh au format 2.2. Elle extrait :
+\begin{itemize}
+    \item Les positions des nœuds (stockées dans la classe \texttt{Node}),
+    \item Les connectivités des éléments (type d'élément selon le code Gmsh : 2 pour P1, 3 pour Q1),
+    \item Les tags physiques (identifiants de région, permettant d'associer les différents matériaux aux éléments).
+\end{itemize}
+
+Une fonctionnalité importante est que \texttt{MeshReader} identifie aussi les arêtes des bords du domaine, ce qui permet ensuite d'appliquer facilement les conditions aux limites en ciblant tous les nœuds d'une arête ou d'une face donnée (par exemple, \texttt{leftNodes} pour le bord gauche). \\
+
+La classe \texttt{Mesh} encapsule l'ensemble de la structure géométrique et topologique :
+\begin{itemize}
+    \item Stockage des noeuds, éléments, propriétés (eux mêmes des objets)
+    \item Identifications des frontières : \texttt{leftNodes}, \texttt{rightNodes}, \texttt{topNodes}, \texttt{bottomNodes},
+    \item Calcul de la fraction volumique par domaine : \texttt{computeVolumeFraction(material)},
+    \item Calcul de la longueur caractéristique globale par \texttt{computeCharacteristicLength()},
+    \item Méthode \texttt{computeGeometry()} initialise la matrice \texttt{B} et la matrice de rigidité élémentaire \texttt{Ke} pour chaque élément.
+\end{itemize}
+
+Une classe \texttt{Node} représente un noeud quelconque, avec ses coordonnées $(x,y)$ et un identifiant global. La classe \texttt{Element} représente un élément fini.
+\subsubsection{Matériaux et propriétés effectives}
+
+La classe \texttt{Material} représente un matériau isotrope. Elle contient :
+\begin{itemize}
+    \item Module de Young $E$, coefficient de Poisson $\nu$, densité $\rho$,
+    \item Matrice de rigidité $\mathbf{C}$, calculée automatiquement lors de la construction via \texttt{computeC()}.
+\end{itemize}
+
+La classe \texttt{CompositeMaterial} gère le comportement effectif du matériau composite. Elle stocke :
+\begin{itemize}
+    \item Pointeurs vers les matériaux constituants (matrice, fibre, porosités), stockage de fractions volumiques.
+    \item Stockage des propriétés effectives homogénéisées, actualisées après chaque calcul EF.
+    \item Matrices de compliance $\mathbf{S}$ et de rigidité $\mathbf{C}$ de l'homogénéisation, affichage.
+\end{itemize}
+
+La méthode \texttt{computeVoigtReussBounds()} calcule les bornes analytiques de Voigt, Reuss, Hill (moyenne arithmétique) et Halpin-Tsai. Ces bornes offrent des repères importants pour évaluer les résultats du calcul EF. Les attributs de la classe sont publics pour permettre un accès et une modification faciles, notamment pour les propriétés effectives qui sont mises à jour après chaque simulation.
+
+\subsubsection{Éléments finis}
+
+Les éléments finis sont organisés par une classe de base abstraite \texttt{Element}, avec plusieurs spécialisations :
+\begin{itemize}
+    \item \texttt{ElementP1} : triangle à 3 nœuds avec interpolation linéaire. Chaque élément a 6 DDL (3 nœuds $\times$ 2 DDL par nœud). La matrice $\mathbf{B}$ est constante sur l'élément (elle ne dépend que de la géométrie du triangle), de dimension $3\times 6$.
+    \item \texttt{ElementQ1} : quadrilatère à 4 nœuds avec bilinéaire. Il a 8 DDL. L'intégration se fait sur le carré de référence $[-1,1]^2$ par transformation isopapamétrique.
+\end{itemize}
+
+Chaque élément stocke la connectivité, son aire, sa matrice \texttt{B}, sa matrice de rigidité élémentaire \texttt{Ke}, et un pointeur vers son matériau associé. La méthode \texttt{compute()} de chaque spécialisation calcule ces quantités à partir de la géométrie et du matériau.
+
+
+\subsubsection{Solveur et assemblage.}
+
+La classe \texttt{Solver} orchestre l'assemblage de $\mathbf{K}$ et $\mathbf{F}$, l'application des conditions aux limites, la résolution du système, et le post-traitement. Ses principales méthodes sont :
+\begin{itemize}
+    \item \texttt{assemble()} : boucle sur tous les éléments, appelle \texttt{compute()} pour chacun, puis ajoute la rigidité élémentaire $\mathbf{K}_e$ aux bonnes positions de la matrice globale $\mathbf{K}$.
+    \item \texttt{applyBC()} : modifie $\mathbf{K}$ et $\mathbf{F}$ pour incorporer les conditions de Dirichlet (déplacement imposé) et de Neumann (force imposée). Les conditions de Dirichlet sont appliquées par modification de la matrice vecteur (comme suggéré dans la partie théorique).
+    \item \texttt{solveConjugateGradient()} : résout $\mathbf{K}\mathbf{U} = \mathbf{F}$ par gradient conjugué préconditionnné, avec un préconditionnneur sélectionnable (Cholesky incomplet par défaut). La bibliothèque Eigen est utilisée pour la gestion des matrices sparses et la résolution itérative,
+    \item \texttt{computeStrainStress()} : après résolution, recalcule $\boldsymbol{\varepsilon} = \mathbf{B}\mathbf{U}_e$ et $\boldsymbol{\sigma} = \mathbf{C}\boldsymbol{\varepsilon}$ pour chaque élément,
+    \item \texttt{saveVTK()} : exporte le maillage, les déplacements, les déformations et contraintes au format VTK pour visualisation.
+\end{itemize}
+
+\subsubsection{Cas tests et validation}
+
+Le code possède différents fichiers qui définissent des cas tests spécifiques :
+\begin{itemize}
+    \item \texttt{test\_traction.cpp} : traction simple sur un domaine carré, avec conditions de Dirichlet à gauche et force répartie à droite,
+    \item \texttt{test\_flexion.cpp} : flexion d'une poutre encastrée-libre, avec une force concentrée à l'extrémité libre,
+    \item \texttt{test\_shear.cpp} : cisaillement pur avec un champ de déplacement affine imposé sur les bords.
+    \item \texttt{test\_composite.cpp} : Cas composite général qui effectue les trois chargements de référence sur un VER issu de la segmentation U-Net, et extrait les propriétés homogénéisées.
+    \item \texttt{test\_utils.cpp} : Calcule les solutions analytiques, les erreurs, les ordres, export de fichier CSV. Cela sert aussi à configurer des paramétrages de CL récurrents : \texttt{applyDistributedForce()}, \texttt{applyShearDirichletBC()}, etc...
+\end{itemize}
+
+L'ensemble du code est orchestré par un fichier \texttt{main.cpp} qui lit la configuration, charge le maillage, initialise les matériaux, et appelle le solveur pour exécuter le cas de test sélectionné. Les résultats sont exportés pour analyse et visualisation. Pour la compilation, un Makefile gère les dépendances et les options de compilation, avec des cibles spécifiques pour chaque cas de test. \\
+
+\texttt{Eigen} est extensivement utilisé pour la gestion des matrices et la résolution linéaire, ce qui simplifie grandement l'implémentation du solveur itératif. Eigen permet aussi d'utiliser directement OpenMP pour le parallélisme, qui est activé pour la résolution du système linéaire avec 16 threads.
+\subsection{Validation du code sur matériau homogène}
+
+Dans un premier temps, le code éléments finis est validé sur des cas tests classiques d'élasticité plane pour un matériau homogène isotrope : traction, flexion et cisaillement. Cela permet de vérifier la bonne implémentation de la formulation variationnelle, de l'assemblage, du solveur et surtout des conditions aux limites (point le plus penible). \\
+
+Afin de vérifier à la fois le côté physique et la convergence numérique, nous comparons les résultats numériques à des solutions analytiques disponibles pour ces cas tests. La "simplicité" de ces cas demande d'imposer des conditions aux limites complexes (force répartie comme une Gaussienne, champ de déplacement affine pour le cisaillement), sinon le solveur converge trop rapidement pour observer une courbe de convergence significative. \\
+
+Avec de telles conditions aux limites, il n'y a généralement pas de solution analytique fermée, on choisit donc de calculer une erreur liée à une propriété physique fondamentale : l'énergie de déformation interne :
+
+\begin{equation}
+W = \frac{1}{2} \int_\Omega \boldsymbol{\varepsilon} : \mathbf{C} : \boldsymbol{\varepsilon}\,\mathrm{d}\Omega,
+\end{equation}
+
+La conservation de l'énergie impose alors que cette énergie de déformation doit être égale à l'énergie induite par les forces appliquées (qui sont connues via les CL). On peut donc calculer une erreur relative sur l'énergie de déformation :
+
+\begin{equation}
+\Delta W_{\text{rel}} = \frac{|W_{\text{num}} - W_{\text{CL}}|}{|W_{\text{CL}}|}.
+\end{equation}
+
+Avec $W_{\text{num}}$ l'énergie de déformation calculée à partir des résultats numériques (déplacements, déformations, contraintes), et $W_{\text{CL}}$ l'énergie de déformation calculée à partir des conditions aux limites (forces appliquées). Cette métrique sera principalement utilisée pour évaluer la convergence du code éléments, elle est particulièrement robuste car elle intègre la physique globale du problème, nous comparerons aussi d'autres métriques sur les constantes (E, G, $\nu$) lorsqu'elles sont disponibles. \\
+
+Avec des éléments finis Q1 (ou P1), avec la norme $L^2$, on a les ordres de convergence suivants :
+\begin{align}
+    | U_h - U |_{L^2} = \mathcal{O}(h^2) \\
+    | \varepsilon_h - \varepsilon |_{L^2} = \mathcal{O}(h) \\
+    | \sigma_h - \sigma |_{L^2} = \mathcal{O}(h)
+\end{align}
+
+$U_h$, $\varepsilon_h$, $\sigma_h$ sont les approximations EF du déplacement, de la déformation et de la contrainte, et $h$ est la taille de maille caractéristique. Cela induit que l'erreur sur l'énergie de déformation doit converger à l'ordre 2, ce qui sera vérifié dans les résultats numériques. Afin de garantir la précision de la validation, nous utilisons le gradient conjugué avec une tolérance fixée à $10^{-12}$ pour exclure toute inférence de l'erreur de résolution du système linéaire sur la convergence observée.
+
+\subsubsection{Traction simple}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|c|c|}
+        \hline
+        $h$ & $n_{\text{elems}}$ & $\Delta W_{\text{rel}}$ & $\Delta E_{\text{rel}}$ & $\Delta \nu_{\text{rel}}$ & $t_{\text{cpu}}$ (s) \\
+        \hline
+        0,500000 & 4 & $2,13\times10^{-1}$ & $2,74\times10^{-1}$ & $9,59\times10^{-2}$ & $1,18\times10^{-5}$ \\
+        0,250000 & 16 & $2,99\times10^{-2}$ & $9,99\times10^{-2}$ & $5,74\times10^{-2}$ & $2,53\times10^{-5}$ \\
+        0,125000 & 64 & $6,59\times10^{-3}$ & $4,33\times10^{-2}$ & $2,90\times10^{-2}$ & $2,82\times10^{-4}$ \\
+        0,062500 & 256 & $1,61\times10^{-3}$ & $2,05\times10^{-2}$ & $1,44\times10^{-2}$ & $7,66\times10^{-4}$ \\
+        0,031250 & 1024 & $4,02\times10^{-4}$ & $1,00\times10^{-2}$ & $7,20\times10^{-3}$ & 0,78 \\
+        0,015625 & 4096 & $1,00\times10^{-4}$ & $4,96\times10^{-3}$ & $3,62\times10^{-3}$ & 0,55 \\
+        0,0078125 & 16384 & $2,51\times10^{-5}$ & $2,47\times10^{-3}$ & $1,82\times10^{-3}$ & 1,02 \\
+        0,00390625 & 65536 & $6,27\times10^{-6}$ & $1,23\times10^{-3}$ & $9,10\times10^{-4}$ & 6,41 \\
+        \hline
+    \end{tabular}%
+    \caption{Résultats de convergence pour le cas de traction simple.}
+    \label{tab:validation_traction}
+\end{table}
+
+\subsubsection{Flexion}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        $h$ & $n_{\text{elems}}$ & $\Delta W_{\text{rel}}$ & $t_{\text{cpu}}$ (s) \\
+        \hline
+        0,100000 & 10 & $1,02\times10^{2}$ & $8,85\times10^{-5}$ \\
+        0,050000 & 40 & $4,90\times10^{-1}$ & $5,88\times10^{-4}$ \\
+        0,025000 & 160 & $9,91\times10^{-2}$ & $3,27\times10^{-3}$ \\
+        0,012500 & 640 & $2,38\times10^{-2}$ & 0,29 \\
+        0,006250 & 2560 & $5,93\times10^{-3}$ & 0,17 \\
+        0,003125 & 10240 & $1,50\times10^{-3}$ & 1,05 \\
+        0,0015625 & 40960 & $3,84\times10^{-4}$ & 11,51 \\
+        0,00078125 & 163840 & $9,91\times10^{-5}$ & 92,60 \\
+        \hline
+    \end{tabular}%
+    \caption{Résultats de convergence pour le cas de flexion.}
+    \label{tab:validation_flexion}
+\end{table}
+
+\subsubsection{Cisaillement pur}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|c|c|c|c|}
+        \hline
+        $h$ & $n_{\text{elems}}$ & $\Delta W_{\text{rel}}$ & $t_{\text{cpu}}$ (s) \\
+        \hline
+        0,500000 & 4 & $2,61\times10^{-1}$ & $3,93\times10^{-5}$ \\
+        0,250000 & 16 & $6,92\times10^{-2}$ & $1,13\times10^{-4}$ \\
+        0,125000 & 64 & $1,93\times10^{-2}$ & $3,64\times10^{-4}$ \\
+        0,062500 & 256 & $5,50\times10^{-3}$ & $1,57\times10^{-3}$ \\
+        0,031250 & 1024 & $1,61\times10^{-3}$ & 0,30 \\
+        0,015625 & 4096 & $4,86\times10^{-4}$ & 0,12 \\
+        0,0078125 & 16384 & $1,51\times10^{-4}$ & 1,04 \\
+        0,00390625 & 65536 & $4,82\times10^{-5}$ & 7,34 \\
+        \hline
+    \end{tabular}%
+    \caption{Résultats de convergence pour le cas de cisaillement pur.}
+    \label{tab:validation_shear}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/validation_convergence.png}
+    \caption{Synthèse des courbes de convergence des tests de validation en élasticité plane sur matériau homogène. Chaque graphique trace l'erreur d'énergie relative $\Delta W_{\text{rel}}$ en fonction de la taille de maille $h$ (ou du nombre d'éléments). Les pentes sur échelle log-log confirmant un ordre de convergence cohérent avec l'ordre attendu pour un élément linéaire.}
+    \label{fig:validation_convergence}
+\end{figure}
+
+\section{Homogénéisation numérique dans le plan transverse}
+
+Nous étudions désormais le comportement effectif du composite C/C dans le plan transverse, c'est-à-dire perpendiculaire à l'axe des fibres. Le matériau est alors supposé isotrope dans ce plan, avec des propriétés effectives à déterminer par homogénéisation numérique. Le maillage est généré à partir de la segmentation U-Net, qui fournit une géométrie réaliste du VER du composite, en omettant les porosités dans un premier temps. Les propriétés effectives sont extraites avec une démarche similaire aux cas tests de validation, en appliquant des chargements de traction dans les deux directions, et un chargement de cisaillement pur, pour calculer l'intégralité des propriétés effectives dans ce plan : $E_1$, $E_2$, $\nu_{12}$, et $G_{12}$. \\ 
+
+Pour le choix des propriétés isotropes individuelles des fibres et de la matrice, nous avons utilisé des données issues de la littérature sur les composites C/C type CVI (Chemical Vapor Infiltration) à base de fibres de la famille PAN et de matrices pyrocarbone. L'article Microstructure and elastic properties of individual components of C/C composites de Ozcan et al. (2009) fournit des valeurs typiques pour les modules d'Young de la fibre et matrice après traitement thermique HTT (High Temperature Treatment). Les coefficients de Poisson sont extraits d'une thèse effectuée au LCTS "".
+\begin{itemize}
+    \item Fibres : $E_f = 34$ GPa, $\nu_f = 0{,}25$ 
+    \item Matrice : $E_m = 12$ GPa, $\nu_m = 0{,}30$
+\end{itemize}
+
+Ces valeurs peuvent sembler faibles,, mais la fibre et matrice dans un composite C/C sont très anisotropes, et les propriétés dans le plan transverse sont beaucoup plus faibles que dans la direction longitudinale. Ces valeurs sont aussi cohérentes avec des données expérimentales issues d'autres études comme "Transverse Properties of Carbon Fibres by Nano-Indentation and Micromechanics" ou encore "On the determination of the elastic constants of carbon fibres by nanoindentation tests". Nous avons volontairement choisi les propriétés de l'article d'Ozcan ayant subi un HTT, car cela augmente le contraste entre les propriétés de la fibre et matrice, ce qui rend l'étude du composite plus intéressante (sans HTT, module similaire de 18 GPa, pas de comparaison possible). \\
+
+Pour les paramètres de la simulation, nous utilisons le gradient conjugué préconditionné avec un préconditionneur de Cholesky incomplet, pour les paramètres du solveur, nous fixons :
+\begin{itemize}
+    \item Tolérance de convergence : \texttt{tol} = $10^{-6}$
+    \item Nombre d'itérations maximum : \texttt{maxIter} = 4000
+    \item Nombre de threads : 16
+\end{itemize}
+
+La tolérance est standard pour un problème complexe comme celui-ci, et le nombre d'itérations maximum permet de garantir la convergence même pour des maillages très fins avec des centaines de milliers d'éléments.
+
+\subsection{Méthode d'extraction des propriétés effectives}
+
+\subsubsection*{Traction 1}
+
+\subsubsection*{Traction 2}
+
+\subsubsection*{Cisaillement pur}    
+
+\subsection{Étude de convergence en maillage}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/conv_maillage1.png}
+    \caption{Étude de convergence en maillage pour le composite, pour les propriétés effectives $E_{1}$, $E_{2}$, $\nu_{12}$, $G_{12}$ qui sont normalisées. Différentes tailles de mailles sont utilisées}
+    \label{fig:validation_convergence_composite}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{3pt}
+    \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
+        \hline
+        Downscale & $h$ & $N_{\text{elems}}$ & $E_1$ (GPa) & $E_2$ (GPa) & $G_{12}$ (GPa) & $v_{12}$ & $v_{21}$ & $t_{\text{cpu}}$ \\
+        \hline
+        20 & 0,0098 & 7752   & 17,213 & 17,159 & 6,7277 & 0,25719 & 0,24561 & 0,358 \\
+        15 & 0,0074 & 13872  & 17,939 & 17,906 & 7,0298 & 0,25678 & 0,24546 & 0,548 \\
+        10 & 0,0049 & 31212  & 18,192 & 18,138 & 7,1315 & 0,25719 & 0,24561 & 2,16 \\
+        8  & 0,0039 & 49152  & 18,298 & 18,219 & 7,1692 & 0,25675 & 0,24564 & 4,13 \\
+        6  & 0,0029 & 87296  & 18,299 & 18,236 & 7,1784 & 0,25722 & 0,24621 & 11,1 \\
+        5  & 0,0024 & 125563 & 18,309 & 18,253 & 7,1855 & 0,25727 & 0,24644 & 19,2 \\
+        4  & 0,0020 & 196608 & 18,319 & 18,255 & 7,1876 & 0,25748 & 0,24646 & 38,1 \\
+        3  & 0,0015 & 349184 & 18,311 & 18,250 & 7,1864 & 0,25770 & 0,24669 & 94,5 \\
+        \hline
+    \end{tabular}
+    \caption{Résultats de convergence en maillage pour les propriétés effectives du composite.}
+    \label{tab:convergence_maillage_composite}
+\end{table}
+
+\subsection{Résultats de l'homogénéisation numérique}
+
+\subsubsection{Traction 1}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Propriétés} & \textbf{Valeur numérique} \\
+        \hline
+        $E_{11}$ & 18,318 GPa \\
+        $\nu_{12}$ & 0,25756 \\
+        \hline
+    \end{tabular}
+    \caption{Propriétés effectives du cas de traction dans la direction $x$.}
+    \label{tab:homo_traction_x}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/solution/ux_tracx.png}
+    \caption{Résultats de la simulation de traction dans la direction $x$ : champ de déplacement $u_x$.}
+    \label{fig:solution_tracx}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/solution/sigmax_tracx.png}
+    \includegraphics[width=0.48\textwidth]{figures/solution/eps_X_tracx.png}
+    \caption{Résultats de la simulation de traction dans la direction $x$ : champ de contrainte $\sigma_{xx}$ (gauche) et champ de déformation $\varepsilon_{XX}$ (droite).}
+    \label{fig:solution_tracx_fields}
+\end{figure}
+
+\subsubsection{Traction 2}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Propriétés} & \textbf{Valeur numérique} \\
+        \hline
+        $E_{22}$ & 18,261 GPa \\
+        $\nu_{21}$ & 0,24682 \\
+        \hline
+    \end{tabular}
+    \caption{Propriétés effectives du cas de traction dans la direction $y$.}
+    \label{tab:homo_traction_y}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/solution/uy_tracy.png}
+    \includegraphics[width=0.48\textwidth]{figures/solution/sigmamag_tracy.png}
+    \caption{Résultats de la simulation de traction dans la direction $y$ : champ de déplacement $u_y$ (gauche) et norme du champ de contrainte $\sigma_{\text{mag}}$ (droite).}
+    \label{fig:solution_tracy}
+\end{figure}
+
+\subsubsection{Cisaillement pur}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|c|}
+        \hline
+        \textbf{Propriétés} & \textbf{Valeur numérique} \\
+        \hline
+        $G_{12}$ & 7,1856 GPa \\
+        \hline
+    \end{tabular}
+    \caption{Propriété effective du cas de cisaillement pur.}
+    \label{tab:homo_shear}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/solution/epsmag_shear.png}
+    \caption{Résultats de la simulation de cisaillement pur : norme du champ de déformation $\varepsilon_{\text{mag}}$.}
+    \label{fig:solution_shear}
+\end{figure}
+    
+\subsubsection{Propriétés effectives et comparaison aux bornes analytiques} 
+
+\paragraph{Récapitulatif}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|c|c|c|c|c|}
+        \hline
+        \textbf{Propriétés} & $E_{11}$ & $E_{22}$ & $G_{12}$ & $\nu_{12}$ & $\nu_{21}$ \\
+        \hline
+        \textbf{Valeur numérique} & 18,318 GPa & 18,261 GPa & 7,1856 GPa & 0,25756 & 0,24682 \\
+        \hline
+    \end{tabular}
+    \caption{Récapitulatif des propriétés effectives du composite.}
+    \label{tab:homo_recap}
+\end{table}
+
+\paragraph{Comparaison avec les bornes analytiques}
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{|l|c|c|c|c|c|}
+        \hline
+        & \textbf{Numérique} & \textbf{Voigt} & \textbf{Reuss} & \textbf{Hill} & \textbf{Halpin-Tsai} \\
+        \hline
+        $E_T$ (GPa) & 18,290 & 21,898 & 16,928 & 19,413 & 18,580 \\
+        $G_{LT}$ (GPa) & 7,1856 & 8,6576 & 6,5674 & 7,6125 & 7,2481 \\
+        $\nu_{TT}$ & 0,25219 & 0,27750 & 0,27523 & 0,27637 & 0,27642 \\
+        \hline
+    \end{tabular}
+    \caption{Comparaison des propriétés effectives numériques avec les bornes analytiques de Voigt, Reuss, Hill et Halpin-Tsai.}
+    \label{tab:homo_bounds}
+\end{table}
+
+
+\subsection{Influence de la fraction volumique}
+
+\begin{table}[H]
+    \centering
+    \scriptsize
+    \begin{tabular}{|l|c|c|c|c|c|c|c|c|c|}
+        \hline
+        \textbf{Propriété} & \textbf{0,252} & \textbf{0,277} & \textbf{0,364} & \textbf{0,375} & \textbf{0,395} & \textbf{0,419} & \textbf{0,450} & \textbf{0,500} & \textbf{0,572} \\
+        \hline
+        $E_T$ (GPa) & 15,1769 & 15,52821 & 16,8763 & 17,0192 & 17,4469 & 17,8100 & 18,2814 & 19,1901 & 20,7652 \\
+        \hline
+        $G_{LT}$ (GPa) & 5,8391 & 5,9828 & 6,5523 & 6,6464 & 6,7803 & 6,9278 & 7,1855 & 7,6028 & 8,1734 \\
+        \hline
+        $v_{TT}$ & 0,2567 & 0,2545 & 0,2494 & 0,2535 & 0,2501 & 0,2468 & 0,2519 & 0,2435 & 0,2440 \\
+        \hline
+    \end{tabular}
+    \caption{Évolution des propriétés effectives moyennes en fonction de la fraction volumique de fibres.}
+    \label{tab:etude_vf}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/etude_vf_E.png}
+    \caption{Évolution du module d'Young transversal $E_T$ en fonction de la fraction volumique de fibres. Chaque point représentant une valeur numérique obtenue à partir d'un maillage généré via U-Net à partir de la base d'images. Les bornes de Voigt, Reuss, Hill et Halpin-Tsai sont tracées pour référence en couleurs.}
+    \label{fig:etude_vf_E}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/etude_vf_G.png}
+    \caption{Évolution du module de cisaillement $G_{LT}$ en fonction de la fraction volumique de fibres. Les points représentent les résultats numériques, tandis que les courbes correspondent aux bornes analytiques de Voigt, Reuss, Hill et Halpin-Tsai.}
+    \label{fig:etude_vf_G}
+\end{figure}
+
+\subsection{Influence des porosités}
+
+Les porosités sont des défauts de fabrication courants dans les composites C/C, résultant de l'infiltration incomplète de la matrice ou de la libération de gaz lors du traitement thermique. Elles peuvent être modélisées comme des inclusions de matériau très faible rigidité (ou même des trous) dans le maillage, ce qui permet d'étudier leur impact sur les propriétés mécaniques effectives du composite. La segmentation U-Net ainsi que la modularité du code en C++ permettent d'intégrer facilement les porosités dans le maillage et de les traiter comme un troisième matériau supposé isotrope. D'un point de vue numérique, il est préférable de traiter ces porosités comme des matériaux avec des propriétés négligeables, mais suffisamment grandes pour éviter des problèmes de convergence :
+\begin{itemize}
+    \item Module de Young : $E_p = 0{,}01$ GPa
+    \item Coefficient de Poisson : $\nu_p = 0{,}3$
+\end{itemize}
+
+Le module d'élasticité (1000 fois plus faible que la matrice) permet de simuler le vide de manière réaliste, tout en assurant la stabilité. Le coefficient de poisson est fixé arbitrairement à une valeur standard (peu d'influence). La simulation est exactement la même que pour le cas sans porosités (pas de CL supplémentaires), mais nous choisissons un VER intéressant à mailler qui présente une porosité centrale de taille significative, ainsi que d'autres porosités réparties dans le VER :
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{figures/pores/mesh.png}
+    \caption{Maillage utilisé pour les simulations de porosité, généré par U-Net. Matrice (bleu), Fibre (blanc), Porosité (rouge).}
+    \label{fig:mesh_pores}
+\end{figure}
+
+La taille de maille (downscale fixé à 3) est fixée à $0.0018$, avec 292352 éléments, encore plus précis que les simulations précédentes, pour garantir une bonne résolution de la concentration de contraintes. Les propriétés effectives sont extraites avec les porosités, et comparées aux résultats en considérant les porosités comme matrice (comme précédemment), afin d'évaluer l'impact de ces défauts sur les propriétés mécaniques du composite. \\
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/pores/ux.png}
+    \includegraphics[width=0.48\textwidth]{figures/pores/sigmamag.png}
+    \caption{Champs de déplacement $u_x$ (gauche) et norme du champ de contrainte $\sigma_{\text{mag}}$ (droite) pour une simulation de traction dans la direction $x$ avec porosités.}
+    \label{fig:pores_fields}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/pores/sigmax.png}
+    \includegraphics[width=0.48\textwidth]{figures/pores/sigmay.png}
+    \caption{Champs de contrainte $\sigma_{xx}$ (gauche) et $\sigma_{yy}$ (droite) dans une zone zoomée autour de la porosité centrale.}
+    \label{fig:pores_sigmax_sigmay}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.48\textwidth]{figures/pores/uy_tracy.png}
+    \includegraphics[width=0.48\textwidth]{figures/pores/sigmamag_ty.png}
+    \caption{Champs de déplacement $u_y$ (gauche) et norme du champ de contrainte $\sigma_{\text{mag}}$ (droite) pour une simulation de traction dans la direction $y$ avec porosités.}
+    \label{fig:pores_fields_tracy}
+\end{figure}
+
+
+% ===========================================================================
+\newpage
+\section{Prise en compte de l'anisotropie des fibres carbone}
+% ===========================================================================
+
+\subsection{Motivation et modèle retenu}
+
+Dans les sections précédentes, les fibres PANEX 33 ont été traitées comme isotropes ($E_f = 228$ GPa, $\nu_f = 0{,}2$). Cette hypothèse constitue une première approximation utile pour la validation du code, mais elle est physiquement inexacte : les fibres de carbone à base PAN sont des matériaux \textbf{isotropes transverses}, présentant une forte différence de rigidité entre la direction longitudinale (axe des fibres $\vec{e}_1$) et le plan transverse ($\vec{e}_2$--$\vec{e}_3$). Cette anisotropie résulte de l'orientation préférentielle des feuillets graphènes le long de l'axe fibre lors du procédé de carbonisation-graphitisation.
+
+La simulation étant réalisée sur une \textbf{coupe transverse} du composite, les fibres apparaissent en section circulaire et l'axe fort $\vec{e}_1$ pointe hors du plan de la coupe (direction $z$). Dans le plan de simulation $(x,y)$, seules les propriétés transverses $E_2$, $\nu_{12}$ et $G_{12}$ sont donc actives. On s'attend ainsi à une diminution significative du module effectif $E_T$ du composite par rapport aux prédictions isotropes.
+
+\subsection{Constantes élastiques des fibres PANEX 33 anisotropes}
+
+\begin{table}[H]
+    \centering
+    \caption{Constantes élastiques isotropes transverses des fibres PANEX 33. $E_1$ est extrait des données fabricant ; $E_2$, $G_{12}$ et $\nu_{23}$ sont issus de la littérature sur les fibres PAN haute résistance.}
+    \label{tab:panex33_aniso}
+    \begin{tabular}{llcc}
+        \toprule
+        \textbf{Paramètre} & \textbf{Signification physique} & \textbf{Valeur} & \textbf{Unité} \\
+        \midrule
+        $E_1$                  & Module longitudinal (axe fibre)         & 228            & GPa \\
+        $E_2 = E_3$            & Module transverse                       & $\approx 20$   & GPa \\
+        $\nu_{12} = \nu_{13}$  & Poisson longitudinal/transverse         & 0{,}20         & --- \\
+        $\nu_{23}$             & Poisson dans le plan transverse         & $\approx 0{,}35$ & --- \\
+        $G_{12} = G_{13}$      & Cisaillement plan axial                 & $\approx 15$   & GPa \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+La relation de réciprocité de Maxwell-Betti impose :
+\begin{equation}
+    \nu_{21} = \nu_{12} \frac{E_2}{E_1}
+    \label{eq:maxwell_betti}
+\end{equation}
+ce qui donne ici $\nu_{21} \approx 0{,}20 \times 20/228 \approx 0{,}018$, très petit devant $\nu_{12}$, cohérent avec la forte dissymétrie de rigidité. Le module de cisaillement transverse se déduit de l'isotropie dans le plan ($\vec{e}_2$--$\vec{e}_3$) :
+\begin{equation}
+    G_{23} = \frac{E_2}{2(1+\nu_{23})} \approx \frac{20}{2 \times 1{,}35} \approx 7{,}4\ \text{GPa}
+    \label{eq:g23}
+\end{equation}
+
+\subsection{Matrice de rigidité plane en contraintes planes}
+
+En appliquant l'hypothèse des contraintes planes à la matrice de souplesse isotrope transverse complète~(\ref{eq:souplesse_isotrope_transverse}), on conserve uniquement les termes liés aux axes 1 et 2 (actifs dans le plan de coupe). La matrice de souplesse réduite s'écrit :
+\begin{equation}
+    [\mathbf{S}]_{\mathrm{plan}} =
+    \begin{bmatrix}
+        \dfrac{1}{E_1} & -\dfrac{\nu_{21}}{E_2} & 0 \\[10pt]
+        -\dfrac{\nu_{12}}{E_1} & \dfrac{1}{E_2} & 0 \\[10pt]
+        0 & 0 & \dfrac{1}{G_{12}}
+    \end{bmatrix}
+    \label{eq:souplesse_plane_aniso}
+\end{equation}
+
+et la matrice de rigidité correspondante, obtenue par inversion analytique de~(\ref{eq:souplesse_plane_aniso}), est :
+\begin{equation}
+    [\mathbf{C}]_{\mathrm{ortho}} =
+    \frac{1}{\Delta}
+    \begin{bmatrix}
+        E_1 & \nu_{12} E_2 & 0 \\
+        \nu_{12} E_2 & E_2 & 0 \\
+        0 & 0 & G_{12} \Delta
+    \end{bmatrix},
+    \qquad \Delta = 1 - \nu_{12}\nu_{21}
+    \label{eq:rigidite_plane_ortho}
+\end{equation}
+
+Avec les valeurs du Tableau~\ref{tab:panex33_aniso}, $\Delta = 1 - 0{,}20 \times 0{,}018 \approx 0{,}9964$, ce qui garantit un bon conditionnement numérique de la matrice de rigidité.
+
+
+\section{Cas tests de validation et d'homogénéisation numérique}
+% ===========================================================================
+
+Pour extraire le tenseur homogénéisé du VER, trois essais numériques sont menés conformément au protocole décrit en section~\ref{subsec:protocoles}. Ces cas tests ont un double objectif : (i) valider le code éléments finis par comparaison aux bornes analytiques, et (ii) extraire les propriétés mécaniques effectives du composite à partir de son VER réel.
+
+\subsection{Cas test 1 : Traction longitudinale}
+
+\subsubsection{Objectif mécanique}
+
+Cet essai sollicite le VER dans le sens des fibres (direction $x$). Il permet d'identifier le module longitudinal effectif $E_L$ et le coefficient de Poisson $\nu_{LT}$ du composite homogénéisé. Dans l'hypothèse anisotrope, les fibres contribuent via leur module transverse $E_2$, car l'axe fort $\vec{e}_1$ est orienté hors plan.
+
+\subsubsection{Conditions aux limites}
+
+Soit un VER de dimensions $L \times H$ :
+\begin{itemize}
+    \item \textbf{Bord gauche} ($x = 0$) : blocage du déplacement $u_x = 0$. Un nœud unique est bloqué en $y$ pour éliminer les mouvements de corps rigide.
+    \item \textbf{Bord droit} ($x = L$) : force répartie uniforme $\bar{F}_x$ (contrainte imposée $\bar{\sigma}_{xx} = \bar{F}_x / H$).
+    \item \textbf{Bords supérieur et inférieur} : surfaces libres (Neumann homogènes).
+\end{itemize}
+
+\subsubsection{Identification des propriétés effectives}
+
+\begin{equation}
+    E_L = \frac{\bar{\sigma}_{xx}}{\langle \varepsilon_{xx} \rangle} = \frac{\bar{F}_x / H}{\langle u_x \rangle / L},
+    \qquad
+    \nu_{LT} = -\frac{\langle \varepsilon_{yy} \rangle}{\langle \varepsilon_{xx} \rangle} = -\frac{\langle u_y \rangle / H}{\langle u_x \rangle / L}
+    \label{eq:identification_EL}
+\end{equation}
+où $\langle \cdot \rangle$ désigne la moyenne spatiale sur le bord considéré.
+
+\subsubsection{Borne de Voigt}
+
+\begin{equation}
+    E_L^{\mathrm{Voigt}} = v_f E_f + (1-v_f) E_m,
+    \qquad
+    \nu_{LT}^{\mathrm{Voigt}} = v_f \nu_f + (1-v_f) \nu_m
+    \label{eq:voigt_EL}
+\end{equation}
+
+Cette borne est exacte pour un chargement longitudinal sur fibres longues alignées et constitue la référence principale pour la validation de cet essai.
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\textwidth]{figures/test1_ux_field.png}
+    \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+    \textit{[Espace réservé --- Champ de déplacement $u_x$ en traction longitudinale sur le VER composite (visualisation Paraview). Le gradient est perturbé localement autour des fibres en raison du contraste de rigidité.]}
+    \vspace{3cm}}}
+    \caption{Champ de déplacement $u_x$ en traction longitudinale sur le VER composite.}
+    \label{fig:test1_ux}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\textwidth]{figures/test1_sigmaxx_field.png}
+    \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+    \textit{[Espace réservé --- Champ de contrainte $\sigma_{xx}$ en traction longitudinale. La contrainte est plus élevée dans les fibres (module plus grand) que dans la matrice. Les concentrations d'interface sont visibles.]}
+    \vspace{3cm}}}
+    \caption{Champ de contrainte $\sigma_{xx}$ en traction longitudinale sur le VER.}
+    \label{fig:test1_sigmaxx}
+\end{figure}
+
+\subsubsection{Résultats numériques}
+
+\begin{table}[H]
+    \centering
+    \caption{Résultats de l'essai de traction longitudinale --- comparaison simulation / borne de Voigt. Les colonnes \textit{[à compléter]} seront renseignées lors de l'application au VER réel.}
+    \label{tab:results_test1}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Grandeur} & \textbf{Simulation EF (iso.)} & \textbf{Simulation EF (aniso.)} & \textbf{Voigt} & \textbf{Écart (\%)} \\
+        \midrule
+        $E_L$ (GPa)    & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        $\nu_{LT}$     & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        $v_f$ (\%)     & \multicolumn{4}{c}{\textit{[issu de la segmentation]}} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% -------------------------------------------------------------------
+\subsection{Cas test 2 : Traction transverse}
+% -------------------------------------------------------------------
+
+\subsubsection{Objectif mécanique}
+
+Cet essai est perpendiculaire aux fibres (direction $y$). Il sollicite la matrice et les interfaces fibre/matrice selon la direction molle du composite. C'est l'essai le plus sensible au contraste de rigidité entre phases et à la fraction volumique de fibres. L'effet de l'anisotropie des fibres (remplacement de $E_f = 228$ GPa par $E_2 = 20$ GPa) est attendu comme majeur sur le résultat.
+
+\subsubsection{Conditions aux limites}
+
+\begin{itemize}
+    \item \textbf{Bord inférieur} ($y = 0$) : blocage $u_y = 0$. Un nœud est bloqué en $x$ pour éliminer le corps rigide.
+    \item \textbf{Bord supérieur} ($y = H$) : force répartie uniforme $\bar{F}_y$.
+    \item \textbf{Bords gauche et droit} : surfaces libres.
+\end{itemize}
+
+\subsubsection{Identification des propriétés effectives}
+
+\begin{equation}
+    E_T = \frac{\bar{F}_y / L}{\langle u_y \rangle / H},
+    \qquad
+    \nu_{TL} = -\frac{\langle u_x \rangle / L}{\langle u_y \rangle / H}
+    \label{eq:identification_ET}
+\end{equation}
+
+\subsubsection{Encadrement analytique}
+
+Le module transverse est encadré par la borne de Reuss (inférieure) et estimé par Halpin-Tsaï :
+\begin{equation}
+    E_T^{\mathrm{Reuss}} = \frac{E_f E_m}{(1-v_f)E_f + v_f E_m}
+    \label{eq:reuss_ET}
+\end{equation}
+\begin{equation}
+    \frac{E_T^{\mathrm{HT}}}{E_m} = \frac{1 + \xi \eta v_f}{1 - \eta v_f},
+    \qquad
+    \eta = \frac{E_f/E_m - 1}{E_f/E_m + \xi},
+    \quad \xi = 2
+    \label{eq:halpin_tsai_ET}
+\end{equation}
+
+Dans l'hypothèse anisotrope, $E_f$ est remplacé par $E_2$ dans ces formules.
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\textwidth]{figures/test2_uy_field.png}
+    \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+    \textit{[Espace réservé --- Champ de déplacement $u_y$ en traction transverse. Les fibres rigides apparaissent comme des îlots de faible déformation. Les concentrations de déformation dans la matrice entre fibres jointives sont caractéristiques.]}
+    \vspace{3cm}}}
+    \caption{Champ de déplacement $u_y$ en traction transverse sur le VER composite.}
+    \label{fig:test2_uy}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\textwidth]{figures/test2_comparison_analytical.png}
+    \fbox{\parbox{0.95\textwidth}{\centering\vspace{2.5cm}
+    \textit{[Espace réservé --- Graphique : $E_T$ en fonction de $v_f$ pour les modèles Reuss, Halpin-Tsaï et la simulation EF (point). Les hypothèses isotrope et anisotrope transverse sont tracées séparément.]}
+    \vspace{2.5cm}}}
+    \caption{Comparaison du module transverse effectif $E_T$ obtenu par simulation EF avec les encadrements analytiques de Reuss et Halpin-Tsaï, pour les deux hypothèses de comportement des fibres.}
+    \label{fig:test2_comparison}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Résultats de l'essai de traction transverse.}
+    \label{tab:results_test2}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Grandeur} & \textbf{Simulation EF (iso.)} & \textbf{Simulation EF (aniso.)} & \textbf{Reuss} & \textbf{Halpin-Tsaï} \\
+        \midrule
+        $E_T$ (GPa) & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        $\nu_{TL}$  & \textit{---} & \textit{---} & \multicolumn{2}{c}{---} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% -------------------------------------------------------------------
+\subsection{Cas test 3 : Cisaillement simple}
+% -------------------------------------------------------------------
+
+\subsubsection{Objectif mécanique}
+
+Cet essai caractérise la résistance au glissement intraphase et aux interfaces. Il permet d'identifier le module de cisaillement effectif $G_{LT}$, qui gouverne la réponse sous torsion ou flexion hors plan.
+
+\subsubsection{Conditions aux limites}
+
+\begin{itemize}
+    \item \textbf{Bord inférieur} ($y = 0$) : blocage total $u_x = u_y = 0$.
+    \item \textbf{Bord supérieur} ($y = H$) : déplacement tangentiel imposé $u_x = \delta$, $u_y = 0$ (cisaillement pur).
+    \item \textbf{Bords gauche et droit} : deux approches envisageables --- surfaces libres (simples mais introduisant des effets de bord) ou conditions périodiques (rigoureuses, à implémenter).
+\end{itemize}
+
+\subsubsection{Identification des propriétés effectives}
+
+\begin{equation}
+    G_{LT} = \frac{\bar{\tau}_{xy}}{\bar{\gamma}_{xy}},
+    \qquad
+    \bar{\tau}_{xy} = \frac{F_{\mathrm{réaction}}}{L},
+    \qquad
+    \bar{\gamma}_{xy} \approx \frac{\delta}{H}
+    \label{eq:identification_GLT}
+\end{equation}
+où $F_{\mathrm{réaction}}$ est la force de réaction totale sur le bord inférieur selon $x$.
+
+\subsubsection{Borne de Reuss et modèle d'Halpin-Tsaï}
+
+\begin{equation}
+    G_{LT}^{\mathrm{Reuss}} = \frac{G_f G_m}{(1-v_f)G_f + v_f G_m},
+    \qquad G_i = \frac{E_i}{2(1+\nu_i)}
+    \label{eq:reuss_GLT}
+\end{equation}
+
+Pour le modèle d'Halpin-Tsaï en cisaillement, le paramètre de forme est $\xi = 1$ dans l'expression~(\ref{eq:halpin_tsai_ET}).
+
+\begin{figure}[H]
+    \centering
+    % \includegraphics[width=\textwidth]{figures/test3_sigmaxy_field.png}
+    \fbox{\parbox{0.95\textwidth}{\centering\vspace{3cm}
+    \textit{[Espace réservé --- Champ de contrainte de cisaillement $\sigma_{xy}$ en cisaillement simple. Les fibres perturbent l'écoulement cisaillant de la matrice, induisant des concentrations de contrainte aux pôles à 45° de la direction de chargement.]}
+    \vspace{3cm}}}
+    \caption{Champ de contrainte de cisaillement $\sigma_{xy}$ en cisaillement simple sur le VER composite.}
+    \label{fig:test3_sigmaxy}
+\end{figure}
+
+\begin{table}[H]
+    \centering
+    \caption{Résultats de l'essai de cisaillement simple.}
+    \label{tab:results_test3}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{Grandeur} & \textbf{Simulation EF (iso.)} & \textbf{Simulation EF (aniso.)} & \textbf{Reuss} & \textbf{Halpin-Tsaï ($\xi=1$)} \\
+        \midrule
+        $G_{LT}$ (GPa) & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% -------------------------------------------------------------------
+\subsection{Synthèse : tenseur homogénéisé du composite C/C}
+% -------------------------------------------------------------------
+
+L'ensemble des trois essais permet de peupler entièrement la matrice de souplesse homogénéisée. Sous l'hypothèse d'un comportement macroscopique isotrope transverse, celle-ci est entièrement définie par les quatre constantes identifiées $E_L$, $E_T$, $\nu_{LT}$ et $G_{LT}$ :
+
+\begin{equation}
+    [\mathbf{S}]^{\mathrm{eff}} =
+    \left[
+    \begin{array}{cccccc}
+    \dfrac{1}{E_L} & -\dfrac{\nu_{TL}}{E_T} & -\dfrac{\nu_{TL}}{E_T} & 0 & 0 & 0 \\[8pt]
+    -\dfrac{\nu_{LT}}{E_L} & \dfrac{1}{E_T} & -\dfrac{\nu_{TT}}{E_T} & 0 & 0 & 0 \\[8pt]
+    -\dfrac{\nu_{LT}}{E_L} & -\dfrac{\nu_{TT}}{E_T} & \dfrac{1}{E_T} & 0 & 0 & 0 \\[8pt]
+    0 & 0 & 0 & \dfrac{2(1+\nu_{TT})}{E_T} & 0 & 0 \\[8pt]
+    0 & 0 & 0 & 0 & \dfrac{1}{G_{LT}} & 0 \\[8pt]
+    0 & 0 & 0 & 0 & 0 & \dfrac{1}{G_{LT}}
+    \end{array}
+    \right]
+    \label{eq:souplesse_effective}
+\end{equation}
+
+\begin{table}[H]
+    \centering
+    \caption{Bilan des constantes élastiques effectives du composite C/C --- comparaison des hypothèses isotrope et anisotrope transverse aux prédictions analytiques.}
+    \label{tab:bilan_homogeneisation}
+    \begin{tabular}{lcccccc}
+        \toprule
+        & \multicolumn{3}{c}{\textbf{Hypothèse isotrope}} & \multicolumn{3}{c}{\textbf{Hypothèse anisotrope}} \\
+        \cmidrule(lr){2-4} \cmidrule(lr){5-7}
+        \textbf{Module} & \textbf{EF} & \textbf{Voigt} & \textbf{Reuss/HT} & \textbf{EF} & \textbf{Voigt} & \textbf{Reuss/HT} \\
+        \midrule
+        $E_L$ (GPa)    & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        $E_T$ (GPa)    & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        $\nu_{LT}$     & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        $G_{LT}$ (GPa) & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} & \textit{---} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Ce tableau de synthèse permettra, une fois complété, de quantifier l'impact de l'hypothèse d'isotropie des fibres sur les prédictions mécaniques. On s'attend à ce que $E_L$ soit proche de la borne de Voigt, tandis que $E_T$ et $G_{LT}$ se situent entre les bornes de Reuss et Voigt, proches du modèle d'Halpin-Tsaï. L'hypothèse anisotrope devrait conduire à une réduction sensible de $E_T$ par rapport au cas isotrope, en raison du module transverse $E_2 \approx 20$ GPa des fibres PANEX 33, très inférieur à $E_1 = 228$ GPa.
+
+% ===========================================================================
+\section{Perspectives}
+% ===========================================================================
+
+\subsection{Validation du code sur configurations hétérogènes}
+
+Avant d'appliquer le pipeline complet au VER réel issu de la segmentation U-Net, plusieurs étapes de validation complémentaires sont prévues :
+
+\begin{itemize}
+    \item \textbf{Inclusion circulaire isolée} : ce cas possède une solution analytique exacte (problème d'Eshelby) et permettra de valider la gestion des interfaces et l'attribution des matériaux par tags physiques.
+    \item \textbf{Étude de convergence en maillage} : affiner progressivement le facteur \texttt{downscale} et vérifier la convergence des modules effectifs.
+    \item \textbf{Conditions aux limites périodiques} : implémentation de CL périodiques pour une homogénéisation rigoureuse du VER, en remplacement des conditions de surfaces libres sur les bords latéraux.
+\end{itemize}
+
+\subsection{Intégration des porosités dans la simulation}
+
+La segmentation U-Net permet d'identifier les porosités comme troisième phase. Deux stratégies sont envisageables :
+\begin{itemize}
+    \item Assigner une rigidité quasi nulle aux éléments de type porosité : approche simple mais susceptible de dégrader le conditionnement de la matrice de rigidité.
+    \item Supprimer les éléments de type porosité du maillage et imposer des conditions de Neumann homogènes sur leurs contours : approche plus rigoureuse, nécessitant une adaptation du générateur de maillage.
+\end{itemize}
+
+\subsection{Extension 3D}
+
+Le pipeline actuel est bidimensionnel. Une extension 3D à partir d'images de tomographie X ou de reconstructions stéréologiques permettrait de prendre en compte l'ondulation des fibres (\textit{crimping}) et l'architecture 3D des torons, absente de la modélisation 2D actuelle.
+
+\end{document}

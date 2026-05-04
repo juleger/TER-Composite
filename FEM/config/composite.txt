@@ -5,7 +5,7 @@ test_type = composite
 element_type = Q1
 # Fichier de maillage
 #mesh_file = mesh/composite_convergence/composite1_vf0.452_3.msh
-mesh_file = mesh/composite_L/composite7_vf0.632.msh
+mesh_file = mesh/composite_T/composite1_vf0.452.msh
 dimension_scale = 1
 E = 12e9
 nu = 0.3
@@ -16,12 +16,12 @@ E_fiber = 34e9
 nu_fiber = 0.25
 rho_fiber = 1800   
 
-#E_pore = 1e6
+#E_pore = 1e7
 #nu_pore = 0.3
 #rho_pore = 10
 
 # Chargement
-F = 1e3         # Force en N
+F = 1e6         # Force en N
 
 # Solveur
 precond = ic

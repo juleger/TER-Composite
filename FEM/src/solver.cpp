@@ -301,7 +301,7 @@ void Solver::saveVTK(const string& filename) {
     file << "\n";
 
     // Notation de Voigt explicite: [xx, yy, xy]
-    file << "FIELD FieldData 3\n";
+    file << "FIELD FieldData 2\n";
 
     file << "sigma 3 " << _mesh.nbNodes() << " double\n";
     for (int i = 0; i < _mesh.nbNodes(); ++i) {
