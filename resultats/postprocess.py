@@ -164,34 +164,22 @@ def mesh_convergence_tables_and_plots(out_dir=None):
             rows.append(row)
         df = pd.DataFrame(rows).sort_values('h')
 
-        tex_lines = []
-        tex_lines.append('\\begin{tabular}{rrrrrrr}')
-        tex_lines.append('h & nelems & E1 & E2 & G12 & v12 & tcpumax \\\\')
-        tex_lines.append('\\hline')
-        for _, r in df.iterrows():
-            tex_lines.append(f"{r['h']:.6g} & {int(r['nelems'])} & {r['E1']:.6g} & {r['E2']:.6g} & {r['G12']:.6g} & {r['v12']:.6g} & {r['tcpumax']:.6g} \\\\")
-        tex_lines.append('\\end{tabular}')
-        tex_path = out_dir / f'mesh_table_{base}.tex'
-        with open(tex_path, 'w') as fh:
-            fh.write('\n'.join(tex_lines))
-
         ref = df.iloc[0]
         norm = df[['h', 'E1', 'E2', 'G12', 'v12', 'v21']].copy()
         norm[['E1', 'E2', 'G12', 'v12', 'v21']] = norm[['E1', 'E2', 'G12', 'v12', 'v21']].div(ref[['E1', 'E2', 'G12', 'v12', 'v21']].values)
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.plot(norm['h'], norm['E1'], '-o', label=r'$E_{11}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[0])
-        ax.plot(norm['h'], norm['E2'], '-s', label=r'$E_{22}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[1])
-        ax.plot(norm['h'], norm['G12'], '-^', label=r'$G_{12}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[2])
-        ax.plot(norm['h'], norm['v12'], '-d', label=r'$\nu_{12}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[3])
-        ax.plot(norm['h'], norm['v21'], '-x', label=r'$\nu_{21}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[4])
+        ax.plot(norm['h'], norm['E2'], '-o', label=r'$E_{22}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[1])
+        ax.plot(norm['h'], norm['G12'], '-o', label=r'$G_{12}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[2])
+        ax.plot(norm['h'], norm['v12'], '-o', label=r'$\nu_{12}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[3])
+        ax.plot(norm['h'], norm['v21'], '-o', label=r'$\nu_{21}$ (norm)', linewidth=2, markersize=6, color=COLOR_PALETTE[4])
         ax.set_xscale('log')
         ax.set_xlabel('h (taille de maille)', fontsize=12)
         ax.set_ylabel('valeur normalisée', fontsize=12)
         ax.legend(fontsize=12)
         ax.grid(True, which='both', ls='--', alpha=0.3)
         fig.tight_layout()
-        fig.savefig(out_dir / f'mesh_norm_{base}.png', dpi=200)
-        print(f'Wrote mesh tables and two plots for {base} -> {tex_path}')
+        fig.savefig(out_dir / f'conv_maillage_{base}.png', dpi=200)
 
 
 def etude_vf_plots(out_dir=None):
@@ -208,14 +196,20 @@ def etude_vf_plots(out_dir=None):
         E1 = float(vals.get('E1', math.nan))
         E2 = float(vals.get('E2', E1))
         G12 = float(vals.get('G12', math.nan))
-        rows.append({'file': f.name, 'vf': vf, 'E1': E1, 'E2': E2, 'G12': G12})
+        nu12 = float(vals.get('v12', vals.get('nu12', math.nan)))
+        nu21 = float(vals.get('v21', vals.get('nu21', math.nan)))
+        rows.append({'file': f.name, 'vf': vf, 'E1': E1, 'E2': E2, 'G12': G12, 'v12': nu12, 'v21': nu21})
     df = pd.DataFrame(rows).sort_values('vf')
 
+    #On fait la moyenne entre E1 et E2 pour ET, pareil pour v12 et v21 pour vTT
+
+    df['ET'] = (df['E1'] + df['E2']) / 2
+    df['nuTT'] = (df['v12'] + df['v21']) / 2
     comp_cfg = Path(__file__).resolve().parents[1] / 'FEM' / 'config' / 'composite.txt'
-    E_m = None
-    E_f = None
-    nu_m = None
-    nu_f = None
+    E_m = 12e9
+    E_f = 34e9
+    nu_m = 0.3
+    nu_f = 0.25
     if comp_cfg.exists():
         for line in comp_cfg.read_text().splitlines():
             if '=' in line:
@@ -253,15 +247,15 @@ def etude_vf_plots(out_dir=None):
         return E_m * (1 + xi * eta * vf) / (1 - eta * vf)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(df['vf'], df['E1']/1e9, 'o--', label=r'$E_T$ (données)', linewidth=2.5, markersize=7, color="black")
+    ax.plot(df['vf'], df['ET']/1e9, 'o--', label=r'$E_T$ (données)', linewidth=1.5, markersize=7, color="black", zorder=10)
     if E_m is not None and E_f is not None:
-        ax.plot(vf_vals, voigt_E(vf_vals)/1e9, '-.', color=COLOR_PALETTE[1], label='Voigt', linewidth=2)
-        ax.plot(vf_vals, reuss_E(vf_vals)/1e9, '-.', color=COLOR_PALETTE[2], label='Reuss', linewidth=2)
-        ax.plot(vf_vals, hill_E(vf_vals)/1e9, '-.', color=COLOR_PALETTE[3], label='Hill', linewidth=2)
-        ax.plot(vf_vals, halpin_tsai_E(vf_vals, xi=1.0)/1e9, '-.', color=COLOR_PALETTE[4], label=r'Halpin-Tsai ($\xi=1$)', linewidth=2)
+        ax.plot(vf_vals, voigt_E(vf_vals)/1e9, '-', color=COLOR_PALETTE[1], label='Voigt', linewidth=2)
+        ax.plot(vf_vals, reuss_E(vf_vals)/1e9, '-', color=COLOR_PALETTE[2], label='Reuss', linewidth=2)
+        ax.plot(vf_vals, hill_E(vf_vals)/1e9, '-', color=COLOR_PALETTE[3], label='Hill', linewidth=2)
+        ax.plot(vf_vals, halpin_tsai_E(vf_vals, xi=0.6)/1e9, '-', color=COLOR_PALETTE[4], label=r'Halpin-Tsai ($\xi=0.6$)', linewidth=2)
     ax.set_xlim(0.2, 0.6)
 
-    y_data = df['E1']/1e9
+    y_data = df['ET']/1e9
     y_min_data = y_data.min()
     y_max_data = y_data.max()
     y_margin = 2.0
@@ -271,7 +265,7 @@ def etude_vf_plots(out_dir=None):
     ax.legend(fontsize=12, loc='best')
     ax.grid(True, ls='--', alpha=0.3)
     fig.tight_layout()
-    fig.savefig(out_dir / 'etude_vf_E.png', dpi=200)
+    fig.savefig('etude_vf_E.png', dpi=200)
 
     G_m = None
     G_f = None
@@ -295,12 +289,12 @@ def etude_vf_plots(out_dir=None):
         return G_m * (1 + xi * eta * vf) / (1 - eta * vf)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(df['vf'], df['G12']/1e9, 'o--', label=r'$G_{LT}$ (données)', linewidth=2.5, markersize=7, color="black")
+    ax.plot(df['vf'], df['G12']/1e9, 'o--', label=r'$G_{LT}$ (données)', linewidth=1.5, markersize=7, color="black", zorder=10)
     if G_m is not None and G_f is not None:
-        ax.plot(vf_vals, voigt_G(vf_vals)/1e9, '-.', color=COLOR_PALETTE[1], label='Voigt (G)', linewidth=2)
-        ax.plot(vf_vals, reuss_G(vf_vals)/1e9, '-.', color=COLOR_PALETTE[2], label='Reuss (G)', linewidth=2)
-        ax.plot(vf_vals, hill_G(vf_vals)/1e9, '-.', color=COLOR_PALETTE[3], label='Hill (G)', linewidth=2)
-        ax.plot(vf_vals, halpin_tsai_G(vf_vals, xi=1.0)/1e9, '-.', color=COLOR_PALETTE[4], label='Halpin-Tsai (G)', linewidth=2)
+        ax.plot(vf_vals, voigt_G(vf_vals)/1e9, '-', color=COLOR_PALETTE[1], label='Voigt (G)', linewidth=2)
+        ax.plot(vf_vals, reuss_G(vf_vals)/1e9, '-', color=COLOR_PALETTE[2], label='Reuss (G)', linewidth=2)
+        ax.plot(vf_vals, hill_G(vf_vals)/1e9, '-', color=COLOR_PALETTE[3], label='Hill (G)', linewidth=2)
+        ax.plot(vf_vals, halpin_tsai_G(vf_vals, xi=0.8)/1e9, '-', color=COLOR_PALETTE[4], label=r'Halpin-Tsai ($\xi=0.8$)', linewidth=2)
     ax.set_xlim(0.2, 0.6)
     y_data = df['G12']/1e9
     y_min_data = y_data.min()
@@ -312,9 +306,43 @@ def etude_vf_plots(out_dir=None):
     ax.legend(fontsize=12, loc='best')
     ax.grid(True, ls='--', alpha=0.3)
     fig.tight_layout()
-    fig.savefig(out_dir / 'etude_vf_G.png', dpi=200)
+    fig.savefig('etude_vf_G.png', dpi=200)
 
     print(f'Graphiques etude_vf écrits dans {out_dir}')
+
+    def voigt_nu(vf):
+        return vf * nu_f + (1 - vf) * nu_m
+    
+    def reuss_nu(vf):
+        return 1.0 / (vf / nu_f + (1 - vf) / nu_m)
+    
+    def hill_nu(vf):
+        return 0.5 * (voigt_nu(vf) + reuss_nu(vf))
+    
+    def halpin_tsai_nu(vf, xi=1.0):
+        r = nu_f / nu_m
+        eta = (r - 1) / (r + xi)
+        return nu_m * (1 + xi * eta * vf) / (1 - eta * vf)
+    
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(df['vf'], df['nuTT'], 'o--', label=r'$\nu_{TT}$ (données)', linewidth=1.5, markersize=7, color="black", zorder=10)
+    if nu_m is not None and nu_f is not None:
+        ax.plot(vf_vals, voigt_nu(vf_vals), '-', color=COLOR_PALETTE[1], label='Voigt (nu)', linewidth=2)
+        ax.plot(vf_vals, reuss_nu(vf_vals), '-', color=COLOR_PALETTE[2], label='Reuss (nu)', linewidth=2)
+        ax.plot(vf_vals, hill_nu(vf_vals), '-', color=COLOR_PALETTE[3], label='Hill (nu)', linewidth=2)
+        ax.plot(vf_vals, halpin_tsai_nu(vf_vals, xi=0.8), '-', color=COLOR_PALETTE[4], label=r'Halpin-Tsai ($\xi=0.8$)', linewidth=2)
+    ax.set_xlim(0.2, 0.6)
+    y_data = df['nuTT']
+    y_min_data = y_data.min()
+    y_max_data = y_data.max()
+    y_margin = 0.01
+    ax.set_ylim(max(0, y_min_data - y_margin), min(1, y_max_data + y_margin))
+    ax.set_xlabel('Fraction volumique de fibre', fontsize=12)
+    ax.set_ylabel(r'$\nu_{TT}$', fontsize=12)
+    ax.legend(fontsize=12, loc='best')
+    ax.grid(True, ls='--', alpha=0.3)
+    fig.tight_layout()
+    fig.savefig('etude_vf_nu.png', dpi=200) 
 
 
 def main():

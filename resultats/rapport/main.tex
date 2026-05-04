@@ -90,21 +90,23 @@ l'échelle des torons.}} \\
 \fancyhead[R]{12 Janvier 2026}
 
 
+\section{Introduction}
+
+Les matériaux composites, constitués de deux ou plusieurs phases distinctes, sont largement utilisés dans les secteurs de l'aéronautique, de l'automobile et de la construction en raison de leurs propriétés mécaniques, thermiques et chimiques supérieures à celles des matériaux traditionnels. Cependant, la complexité de leur microstructure rend la prédiction de leur comportement mécanique un défi majeur. L'objectif de ce travail est de développer une chaîne numérique permettant de modéliser le comportement mécanique homogénéisé d'un composite à partir d'images 2D de sa microstructure. Cette approche combine dans un premier temps des techniques de traitement d'image classique et par deep learning pour modéliser la géométrie du composite. Dans un second temps, un code éléments finis pour l'élasticité linéaire est développé pour simuler les essais mécaniques sur un Volume Élémentaire Représentatif (VER) du composite. Ces résultats permettent à la fois d'étudier la réponse mécanique du composite, et de comparer les propriétés effectives obtenues à partir de la simulation numérique avec des méthodes d'homogénéisation analytiques classiques. L'ensemble de cette étude se focalise sur un composite de type carbone/carbone (C/C) typiquement utilisé dans les tuyères de fusée. Les résultats obtenus sont comparés à des méthodes d'homogénéisation analytiques classiques telles que la loi des mélanges, la borne de Reuss et le modèle d'Halpin-Tsai. 
 % ===========================================================================
 \section{Matériaux composites}
 % ===========================================================================
 
 \subsection{Définition}
 
-Un matériau composite est l'assemblage intentionnel d'au moins deux constituants non miscibles à l'échelle microscopique : un renfort (fibres, tissus, particules, nids d'abeilles) et une matrice (phase continue) liés par une interface.
-L'objectif est d'obtenir des propriétés spécifiques (rigidité/masse, résistance/masse, tenue à l'environnement, fonctions) supérieures à celles de chaque constituant pris isolément.\\
-
-Rôle des constituants :
+Un matériau composite est l'assemblage intentionnel d'au moins deux constituants non miscibles à l'échelle microscopique : un renfort (fibres, tissus, particules, nids d'abeilles) et une matrice (phase continue) liés par une interface. L'objectif est d'obtenir des propriétés mécaniques, thermiques ou chimiques supérieures à celles des constituants pris individuellement, en combinant leurs avantages respectifs. Les composites sont omniprésents dans les secteurs de l'aéronautique, de l'automobile, du sport, de la construction et de l'énergie, grâce à leur rapport performance/masse exceptionnel et leur grande liberté de conception. On distingue trois éléments clés dans un composite, ayant chacun un rôle spécifique dans le comportement global du matériau :
 \begin{itemize}
     \item Renfort : porte l'essentiel des efforts (traction/cisaillement) et pilote les propriétés anisotropes via l'orientation et l'architecture .
     \item Matrice : enrobe et transfère les charges vers le renfort, donne la forme, assure la cohésion, l'étanchéité et la tenue environnementale.
     \item Interface : zone de contact renfort/matrice ; sa qualité conditionne la résistance au délaminage, la fatigue et la durabilité.
 \end{itemize}
+
+\vspace{0.2cm}
 Les matrices se regroupent en trois grandes familles : organiques, céramiques et métalliques dont la nature conditionne la fenêtre de température, la tenue chimique, la masse et la mise en œuvre du composite.
 
 \begin{itemize}
@@ -113,13 +115,14 @@ Les matrices se regroupent en trois grandes familles : organiques, céramiques e
     \item Composites à matrice métallique (CMM) — La matrice est un métal/alliage renforcé par des particules ou fibres. Ils offrent une bonne tenue mécanique à plus haute température que les CMO et une conduction thermique/électrique intéressante, au prix d'une densité plus élevée ; utilisés pour des pièces thermomécaniques, échangeurs et applications aéro/spatiales.
 \end{itemize}
 
+Les composites de type C/C (Carbone/Carbone) sont un type spécifique de composite à matrice céramique où les fibres et la matrice sont tous deux constitués de carbone. Ils sont particulièrement adaptés aux applications à haute température et à forte sollicitation mécanique, comme les tuyères de fusée, les applications aérospatiales, nucléaires et les freins de Formule 1. Leur microstructure unique, combinant la résistance des fibres de carbone et la tenue thermique de la matrice, en fait un matériau de choix pour les environnements extrêmes. Cependant, la complexité de leur microstructure, avec des fibres orientées et une matrice poreuse, rend la modélisation de leur comportement mécanique un défi majeur. De plus, la nature des applications (militaires notamment) rend difficile l'accès à des données industrielles ou académiques détaillées sur les propriétés mécaniques de ces composites, ce qui complique encore davantage la validation des modèles numériques développés.
 % ===========================================================================
 \section{Élasticité linéaire}
 % ===========================================================================
 
 \subsection{Loi de Hooke}
 
-Généralisation matricielle de la loi de Hooke pour un petit élément de volume :
+La loi de Hooke généralisée relie les contraintes $[\sigma]$ et les déformations $[\epsilon]$ d'un matériau linéairement élastique à travers une matrice de coefficients élastiques. En notation matricielle, elle s'écrit :
 \begin{equation}
     [\sigma] = [C][\epsilon]
 \end{equation}
@@ -128,11 +131,9 @@ ou :
     [\epsilon] = [S][\sigma]
 \end{equation}
 
-Avec $[C]$ est le tenseur de rigidité et $[S]$ le tenseur de souplesse. Leurs composantes dépendent des paramètres comportementaux des matériaux : modules de Young, coefficients de Poisson, modules de cisaillement.
+Avec $[C]$ est le tenseur de rigidité et $[S]$ le tenseur de souplesse. Leurs composantes dépendent des paramètres comportementaux des matériaux : modules de Young, coefficients de Poisson, modules de cisaillement. Les matrices $[C]$ et $[S]$ sont symétriques et positives définies, et leur structure dépend de la symétrie du matériau (isotrope, orthotrope, anisotrope).
 
-Pour confirmer les résultats de la simulation, il faudra parvenir à trouver ces paramètres pour la fibre et la matrice constituant le matériau étudié.
-
-Ces matrices sont simplifiables en fonction du modèle retenu : orthotrope, isotrope transverse. Le matériau semble isotrope transverse car il admet des fibres ordonnées et parallèles. Ainsi, si la direction des fibres, notée $\vec{L}$, est la direction $\vec{e_1}$ , la matrice de souplesse s'écrit sous la forme suivante dans son repère principal $(R) = (O,\vec{e_1},\vec{e_2},\vec{e_3}) = (O,L,T,T)$ :
+Pour confirmer les résultats de la simulation, il faudra parvenir à trouver ces paramètres pour la fibre et la matrice constituant le matériau étudié. Ces matrices sont simplifiables en fonction du modèle retenu : orthotrope, isotrope transverse. Le matériau semble isotrope transverse car il admet des fibres ordonnées et parallèles. Ainsi, si la direction des fibres, notée $\vec{L}$, est la direction $\vec{e_1}$ , la matrice de souplesse s'écrit sous la forme suivante dans son repère principal $(R) = (O,\vec{e_1},\vec{e_2},\vec{e_3}) = (O,L,T,T)$ :
 
 \begin{equation}
     \mathbf{[S]}_{(R)} =
@@ -247,7 +248,7 @@ Dans \href{https://www.emse.fr/~drapier/index_fichiers/CoursPDF/Composites/Compo
 La présente étude porte sur le matériau composant la tuyère de la fusée Ariane 5.
 Les tuyères de fusée sont \href{http://www.capcomespace.net/dossiers/espace_europeen/ariane/ariane5/caracteristiques.htm}{traditionnellement fabriquées} avec un composite CMC, plus précisément de type Carbon-Carbon ou C/C (selon d'autres \href{http://www.capcomespace.net/dossiers/espace_europeen/ariane/ariane5/caracteristiques.htm}{sources}, la matrice du composite pourrait inclure de la silice plutôt que du carbone). En effet, ces composites sont moins denses et thermiquement plus résistants que les CMM.
 
-Les fibres de carbone de cette matrice sont de type PANEX 33 avec un module de Young équivalent à \href{https://www.gurit.com/wp-content/uploads/2022/12/guide-to-composites-1.pdf}{228 GPa} et d'un coefficient de Poisson de \href{https://www.mdpi.com/2504-477X/5/4/96}{0.2}. Pour ce qui est de la matrice, elle est de type carbone obtenu par CVI (Chemical Vapour Infiltration), ayant comme propriété \href{https://pdf.sciencedirectassets.com/271508/1-s2.0-S0008622305X03359/1-s2.0-S0008622305001570/main.pdf}{215 GPa} pour le module de Young et 0.41 pour le coefficient de Poisson.\\
+Les fibres de carbone de cette matrice sont de type PANEX 33 avec un module de Young équivalent à \href{https://www.gurit.com/wp-content/uploads/2022/12/guide-to-composites-1.pdf}{228 GPa} et d'un coefficient de Poisson de \href{https://www.mdpi.com/2504-477X/5/4/96}{0.2}. Pour ce qui est de la matrice, elle est de type carbone obtenu par CVI (Chemical Vapour Infiltration), ayant comme propriété \href{https://pdf.sciencedirectassets.com/271508/1-s2.0-S0008622305X03359/1-s2.0-S0008622305001570/main.pdf}{215 GPa} pour le module de Young et 0.41 pour le coefficient de Poisson. Pour l'homogénéisation dans le plan transverse, nous utiliserons d'autres propriétés plus adaptées issues de la littérature.
 
 Les fibres de carbone étudiées présentent la même évolution du comportement en traction lors d'essais à des températures de plus en plus élevées : la température n'a pas d'influence majeure sur leurs propriétés élastiques dans la gamme considérée.
 
@@ -313,9 +314,17 @@ G_{LT}^{\text{Reuss}} = \frac{G_f G_m}{v_m G_f + v_f G_m}
 
 où $G_i = \frac{E_i}{2(1+\nu_i)}$ est le module de cisaillement de chaque phase.
 
+\subsubsection{Moyenne de Hill} 
+
+La moyenne de Hill est une approche plus réaliste qui combine les hypothèses de Voigt et Reuss pour fournir une estimation plus précise des propriétés effectives. Elle est introduite par la relation suivante :
+\begin{equation}
+E_{\text{Hill}} = \frac{E_{\text{Voigt}} + E_{\text{Reuss}}}{2}
+\end{equation}
+
+C'est une moyenne arithmétique des deux bornes (même raisonnement pour les autres propriétés). Cette méthode est souvent utilisée comme une première approximation pour les composites à fibres continues, car elle tient compte à la fois des contributions de la fibre et de la matrice.
 \subsubsection{Modèle d'Halpin-Tsai}
 
-Le modèle d'Halpin-Tsai est une formule semi-empirique particulièrement adaptée aux composites à fibres continues. Elle interpole entre les comportements de Voigt et Reuss.
+Le modèle d'Halpin-Tsai est une formule semi-empirique particulièrement adaptée aux composites à fibres continues. Elle interpole entre les comportements de Voigt et Reuss en captant les effets de la géométrie et de l'orientation des fibres à travers un paramètre de forme $\xi$.
 
 Pour le module transverse $E_T$ :
 \begin{equation}
@@ -327,7 +336,7 @@ où :
 \eta = \frac{\frac{E_f}{E_m} - 1}{\frac{E_f}{E_m} + \xi}
 \end{equation}
 
-Le paramètre $\xi$ dépend de la géométrie et du type de chargement. Pour des fibres circulaires sous chargement transverse, on utilise généralement $\xi = 2$ pour le module transverse et $\xi = 1$ pour le module de cisaillement.
+Le paramètre $\xi$ dépend de la géométrie et du type de chargement. Pour des fibres circulaires sous chargement transverse, on utilise généralement $\xi = 2$ pour le module transverse et $\xi = 1$ pour le module de cisaillement. Ce facteur peut être ajusté pour mieux correspondre aux données expérimentales ou à la microstructure spécifique du composite étudié.
 
 \subsection{Protocoles de caractérisation effective}
 \label{subsec:protocoles}
@@ -376,7 +385,7 @@ Pour l'image présentée en Figure~\ref{fig:img_original}, la détection automat
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{figures/detected_circles.png}
+    \includegraphics[width=0.55\textwidth]{figures/detected_circles.png}
     \caption{Détection automatique des 28 fibres (cercles verts avec centres rouges) sur l'image du composite}
     \label{fig:detected_circles}
 \end{figure}
@@ -389,7 +398,7 @@ La génération automatique du maillage constitue l'étape intermédiaire crucia
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.6\textwidth]{figures/mesh.png}
+    \includegraphics[width=0.55\textwidth]{figures/mesh.png}
     \caption{Maillage généré automatiquement depuis la détection Hough : 14\,240 éléments triangulaires avec fibres (noir) dans matrice (bleu)}
     \label{fig:mesh}
 \end{figure}
@@ -497,9 +506,9 @@ Cette stratégie a plusieurs avantages : elle réduit les artefacts de bord qui 
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.75\textwidth]{figures/1_segmented.png}
-    \includegraphics[width=0.75\textwidth]{figures/30_segmented.png}
-    \caption{Inférence U-Net sur deux images, avec à gauche l'image originale et à droite la segmentation. La première image montre des fibres circulaires, le second des fibres elliptiques.}
+    \includegraphics[width=0.85\textwidth]{figures/1_segmented.png}
+    \includegraphics[width=0.85\textwidth]{figures/30_segmented.png}
+    \caption{Inférence U-Net sur deux images, avec à gauche l'image originale et à droite la segmentation. La première image montre des fibres circulaires, le second des fibres elliptiques. Les fibres sont en rouge, la matrice en gris, et les porosités en bleu.}
     \label{fig:segmentation_results}
 \end{figure}
 
@@ -534,9 +543,7 @@ L'U-Net est supérieur à la transformée de Hough sur tous les critères qualit
 \subsection{Génération de maillage à partir de segmentation U-Net}
 \label{subsubsec:maillage_unet}
 
-Une fois la segmentation obtenue par le U-Net, il est nécessaire de convertir la carte de segmentation en un maillage exploitable pour les simulations EF. Le script \texttt{mesh.py} réalise cette conversion en plusieurs étapes, depuis le post-traitement du masque jusqu'à la génération du fichier Gmsh (.msh) avec les éléments finis correspondants. Le traitement via Hough permettait d'obtenir une géometrie Gmsh, ce qui permettait de faire rapidement un maillage avec les algorithmes du logiciel. En revanche, la segmentation par U-Net produit un masque pixelisé, qui ne peut pas être directement utilisé pour faire un maillage de qualité. Cela nous force à implémenter un maillage structuré qui se base sur la nature de la segmentation (pixels) plutôt que sur une géométrie continue.
-
-\paragraph{Post-traitement du masque.}
+Une fois la segmentation obtenue par le U-Net, il est nécessaire de convertir la carte de segmentation en un maillage exploitable pour les simulations EF. Le script \texttt{mesh.py} réalise cette conversion en plusieurs étapes, depuis le post-traitement du masque jusqu'à la génération du fichier Gmsh (.msh) avec les éléments finis correspondants. Le traitement via Hough permettait d'obtenir une géometrie Gmsh, ce qui permettait de faire rapidement un maillage avec les algorithmes du logiciel. En revanche, la segmentation par U-Net produit un masque pixelisé, qui ne peut pas être directement utilisé pour faire un maillage de qualité. Cela nous force à implémenter un maillage structuré qui se base sur la nature de la segmentation (pixels) plutôt que sur une géométrie continue. \\
 
 Le masque brut obtenu par inférence du U-Net est relu et éventuellement sous-échantillonné par un facteur \texttt{downscale}, où chaque pixel du masque final correspond à un bloc de pixels du masque original. Ce paramètre contrôle le compromis fondamental entre fidélité géométrique et coût computationnel : un sous-échantillonnage agressif réduit le nombre d'éléments et accélère les calculs EF, mais au prix d'une géométrie moins fidèle. Les images ayant des dimensions de l'ordre de $2000\times2000$ pixels, cela amenerait à plus de 4 millions d'éléments à traiter sans downscale. Un deuxième paramètre, \texttt{min\_size}, pilote le nettoyage morphologique appliqué au masque sous-échantillonné. Ce nettoyage est réalisé via \texttt{skimage.morphology} et comprend les opérations suivantes :
 \begin{itemize}
@@ -545,30 +552,31 @@ Le masque brut obtenu par inférence du U-Net est relu et éventuellement sous-�
     \item Ouverture morphologique spécifique sur les fibres pour éliminer les connexions interfibres.
 \end{itemize}
 
-\paragraph{Conversion pixel-vers-élément et choix du type d'élément.}
-
+\vspace{0.2cm}
 Une fois le masque nettoyé et éventuellement sous-échantillonné, chaque pixel du masque final est ensuite transformé en élément Gmsh. Le format msh 2.2 est généré directement par le code. Deux modes sont proposés : 
 \begin{itemize}
     \item Mode \texttt{quad} : un pixel devient un quadrilatère (Q1). Maillage structuré facile à implémenter 
     \item Mode \texttt{tri} : chaque pixel est découpé en deux triangles selon un damier alterné. Deux fois plus d'éléments que le mode quadrilatère, mais meilleure représentation de la géométrie avec optimisation du damier.
 \end{itemize}
 
-Les tags physiques (identifiants de région) sont repris directement du masque : chaque pixel reçoit un tag correspondant à sa classe (0 = matrice, 1 = fibre, 2 = porosité). Cela crée automatiquement trois domaines physiques distincts dans le fichier Gmsh, ce qui simplifie ensuite l'affectation des propriétés matériaux dans le solveur EF. Dans toute la suite du code, on privilégie le mode quadrilatère, qui est plus rapide à générer et à traiter que les triangles, et qui est suffisant pour la qualité de segmentation obtenue par le U-Net. Le mode triangulaire structuré est plus coûteux en éléments et nécessite encore plus d'optimisation pour mieux représenter la géométrie. \\
+\vspace{0.2cm}
+Les tags physiques (identifiants de région) sont repris directement du masque : chaque pixel reçoit un tag correspondant à sa classe (1 = matrice, 2 = fibre, 3 = porosité). Cela crée automatiquement trois domaines physiques distincts dans le fichier Gmsh, ce qui simplifie ensuite l'affectation des propriétés matériaux dans le solveur EF. Dans toute la suite du code, on privilégie le mode quadrilatère, qui est plus rapide à générer et à traiter que les triangles, et qui est suffisant pour la qualité de segmentation obtenue par le U-Net. Le mode triangulaire structuré est plus coûteux en éléments et nécessite encore plus d'optimisation pour mieux représenter la géométrie. \\
 
 Le passage à une géometrie non structurée de triangles par exemple comme avec Hough nécessite d'implémenter un algorithme de triangulation (Delaunay) à partir de la segmentation, ce qui est extrêmement complexe, car il faut extraire les contours des fibres, les convertir en polygones, gérer les intersections, et faire un maillage de qualité à partir de ces polygones. \\
 
-Le code éléments finis du S7 qui gérait à la base des éléments triangulaires (P1) non structuré, a donc été adapté pour pouvoir gérer des éléments quadrilatères (Q1) structurés, ce qui est plus simple à implémenter et à traiter. Ici, la dimension maximale du maillage est normalisée à 1 unité, ce qui ne prend pas en compte l'échelle physique réelle du composite, ce qui n'est pas un problème comme on travaille en élasticité linéaire. 
+Le code éléments finis du S7 qui gérait à la base des éléments triangulaires (P1) non structuré, a donc été adapté pour pouvoir gérer des éléments quadrilatères (Q1) structurés, ce qui est plus simple à implémenter et à traiter. Ici, la dimension maximale du maillage est normalisée à 1 unité, ce qui ne prend pas en compte l'échelle physique réelle du composite, ce qui n'est pas un problème comme on travaille en élasticité linéaire. \\
 
-Une pipeline \texttt{main.py} gère l'ensemble du processus : lecture de l'image, segmentation U-Net, post-traitement, génération du maillage Gmsh. Pour la première image de composite présentée dans la segmentation, on affiche sur \texttt{Paraview} le maillage généré pour un downscale de 5 et 15, pour illustrer l'impact du paramètre de sous-échantillonnage sur la fidélité géométrique et le nombre d'éléments générés.
+Une pipeline \texttt{main.py} gère l'ensemble du processus : lecture de l'image, segmentation U-Net, post-traitement, génération du maillage Gmsh. Pour l'image de VER présentée en premier dans la figure \ref{fig:segmentation_results}, on affiche sur \texttt{Paraview} le maillage généré pour un downscale de 5 et 15, pour illustrer l'impact du paramètre de sous-échantillonnage sur la fidélité géométrique et le nombre d'éléments générés. 
 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.48\textwidth]{figures/mesh1_downscale5.png}
     \includegraphics[width=0.48\textwidth]{figures/mesh1_downscale15.png}
-    \caption{Maillage généré à partir de la segmentation U-Net pour un downscale de 5 (en haut) et 15 (en bas). 125563 éléments pour le downscale 5, 13872 pour le downscale 15.}
+    \caption{Maillage généré à partir de la segmentation U-Net pour un downscale de 5 (en haut) et 15 (en bas). 125563 éléments pour le downscale 5, 13872 pour le downscale 15. Tags physiques : 1 = matrice (bleu), 2 = fibre (gris), 3 = porosité (rouge).}
     \label{fig:mesh_downscale}
 \end{figure}
 
+Le maillage généré avec un downscale de 15 comporte 13872 éléments quad, tandis que celui avec un downscale de 5 en comporte 125563, soit presque 10 fois plus. On remarque que le maillage avec un downscale de 5 capture beaucoup mieux les détails de la géométrie, notamment les contours des fibres et la séparation inter-fibres, tandis que le maillage avec un downscale de 15 perd une grande partie de la fidélité géométrique. Même avec un nombre conséquent d'éléments, on observe que la géométrie circulaire des fibres n'est pas parfaitement représentée. C'est le principal inconvénient du maillage structuré à partir d'une segmentation pixelisée, l'étude de convergence en maillage sera donc particulièrement importante pour s'assurer que les résultats de la simulation ne sont pas biaisés par la qualité du maillage.
 
 \newpage
 \section{Implémentation numérique des éléments finis}
@@ -638,11 +646,12 @@ Le système linéaire résultant est ensuite résolu à l'aide d'un solveur ité
 \subsection{Architecture du code éléments finis}
 
 Le code éléments finis est implémenté en C++ pour des raisons de performance, avec une organisation modulaire et orientée objet. La programmation orientée objet permet de structurer le code de manière claire et extensible, en encapsulant les différentes fonctionnalités dans des classes dédiées, ce qui est particulièrement important pour un projet de cette envergue. Les différentes parties du code sont présentées ci-dessous, avec une description de leur rôle et de leur interaction.
+
 \subsubsection{Gestionnaire de configuration}
 
 La classe \texttt{Config} centralise tous les paramètres des simulations :
 \begin{itemize}
-    \item Type de test (\texttt{testType}) : \textit{``composite''}, \textit{``traction''}, \textit{``flexion''} ou \textit{``shear''}, les trois derniers étant dans des cas homogènes
+    \item Type de test (\texttt{testType}) : \textit{``composite''}, \textit{``traction''}, \textit{``flexion''} ou \textit{``shear''}, les trois derniers étant dans des cas homogènes.
     \item Fichier de maillage Gmsh (\texttt{meshFile}) : chemin vers le fichier .msh généré à partir de la segmentation U-Net,
     \item Type d'élément fini (\texttt{elementType}) : P1 (triangle linéaire) ou Q1 (quadrilatère bilinéaire),
     \item Propriétés des matériaux : module de Young $E$, coefficient de Poisson $\nu$, pour matrice, fibres, et éventuellement porosités,
@@ -650,7 +659,7 @@ La classe \texttt{Config} centralise tous les paramètres des simulations :
     \item Paramètres du solveur : tolérance de convergence, nombre d'itérations maximum, type de préconditionnneur (Cholesky incomplet, diag, id),
     \item Paramètres d'exportation des résultats : format de sortie (Paraview, CSV), etc...
 \end{itemize}
-
+\vspace{0.2cm}
 Cette architecture permet de charger tous les paramètres depuis un fichier texte simple, typiquement \texttt{config/composite.txt}, sans recompiler le code.
 
 \subsubsection{Maillage et géométrie}
@@ -662,6 +671,7 @@ La classe \texttt{MeshReader} est responsable de l'interprétation des fichiers 
     \item Les tags physiques (identifiants de région, permettant d'associer les différents matériaux aux éléments).
 \end{itemize}
 
+\vspace{0.2cm}
 Une fonctionnalité importante est que \texttt{MeshReader} identifie aussi les arêtes des bords du domaine, ce qui permet ensuite d'appliquer facilement les conditions aux limites en ciblant tous les nœuds d'une arête ou d'une face donnée (par exemple, \texttt{leftNodes} pour le bord gauche). \\
 
 La classe \texttt{Mesh} encapsule l'ensemble de la structure géométrique et topologique :
@@ -673,6 +683,7 @@ La classe \texttt{Mesh} encapsule l'ensemble de la structure géométrique et to
     \item Méthode \texttt{computeGeometry()} initialise la matrice \texttt{B} et la matrice de rigidité élémentaire \texttt{Ke} pour chaque élément.
 \end{itemize}
 
+\vspace{0.2cm}
 Une classe \texttt{Node} représente un noeud quelconque, avec ses coordonnées $(x,y)$ et un identifiant global. La classe \texttt{Element} représente un élément fini.
 \subsubsection{Matériaux et propriétés effectives}
 
@@ -682,6 +693,7 @@ La classe \texttt{Material} représente un matériau isotrope. Elle contient :
     \item Matrice de rigidité $\mathbf{C}$, calculée automatiquement lors de la construction via \texttt{computeC()}.
 \end{itemize}
 
+\vspace{0.2cm}
 La classe \texttt{CompositeMaterial} gère le comportement effectif du matériau composite. Elle stocke :
 \begin{itemize}
     \item Pointeurs vers les matériaux constituants (matrice, fibre, porosités), stockage de fractions volumiques.
@@ -689,20 +701,22 @@ La classe \texttt{CompositeMaterial} gère le comportement effectif du matériau
     \item Matrices de compliance $\mathbf{S}$ et de rigidité $\mathbf{C}$ de l'homogénéisation, affichage.
 \end{itemize}
 
-La méthode \texttt{computeVoigtReussBounds()} calcule les bornes analytiques de Voigt, Reuss, Hill (moyenne arithmétique) et Halpin-Tsai. Ces bornes offrent des repères importants pour évaluer les résultats du calcul EF. Les attributs de la classe sont publics pour permettre un accès et une modification faciles, notamment pour les propriétés effectives qui sont mises à jour après chaque simulation.
+\vspace{0.2cm}
+La méthode \texttt{computeVoigtReussBounds()} calcule les bornes analytiques de Voigt, Reuss, Hill (moyenne arithmétique) et Halpin-Tsai, présentées dans la partie théorique. 
 
 \subsubsection{Éléments finis}
 
-Les éléments finis sont organisés par une classe de base abstraite \texttt{Element}, avec plusieurs spécialisations :
+Les éléments finis sont organisés par une classe de base abstraite \texttt{Element}, avec plusieurs classes filles :
 \begin{itemize}
     \item \texttt{ElementP1} : triangle à 3 nœuds avec interpolation linéaire. Chaque élément a 6 DDL (3 nœuds $\times$ 2 DDL par nœud). La matrice $\mathbf{B}$ est constante sur l'élément (elle ne dépend que de la géométrie du triangle), de dimension $3\times 6$.
     \item \texttt{ElementQ1} : quadrilatère à 4 nœuds avec bilinéaire. Il a 8 DDL. L'intégration se fait sur le carré de référence $[-1,1]^2$ par transformation isopapamétrique.
 \end{itemize}
 
-Chaque élément stocke la connectivité, son aire, sa matrice \texttt{B}, sa matrice de rigidité élémentaire \texttt{Ke}, et un pointeur vers son matériau associé. La méthode \texttt{compute()} de chaque spécialisation calcule ces quantités à partir de la géométrie et du matériau.
+\vspace{0.2cm}
+Chaque élément stocke la connectivité, son aire, sa matrice \texttt{B}, sa matrice de rigidité élémentaire \texttt{Ke}, et un pointeur vers son matériau associé. La méthode \texttt{compute()} de chaque spécialisation calcule ces quantités à partir de la géométrie et du matériau. Cette classe est la clé de voûte, qui encapsule à la fois la géométrie, l'indexation, les propriétés matérielles, et la formulation variationnelle pour chaque type d'élément.
 
 
-\subsubsection{Solveur et assemblage.}
+\subsubsection{Solveur et assemblage}
 
 La classe \texttt{Solver} orchestre l'assemblage de $\mathbf{K}$ et $\mathbf{F}$, l'application des conditions aux limites, la résolution du système, et le post-traitement. Ses principales méthodes sont :
 \begin{itemize}
@@ -717,11 +731,9 @@ La classe \texttt{Solver} orchestre l'assemblage de $\mathbf{K}$ et $\mathbf{F}$
 
 Le code possède différents fichiers qui définissent des cas tests spécifiques :
 \begin{itemize}
-    \item \texttt{test\_traction.cpp} : traction simple sur un domaine carré, avec conditions de Dirichlet à gauche et force répartie à droite,
-    \item \texttt{test\_flexion.cpp} : flexion d'une poutre encastrée-libre, avec une force concentrée à l'extrémité libre,
-    \item \texttt{test\_shear.cpp} : cisaillement pur avec un champ de déplacement affine imposé sur les bords.
+    \item \texttt{test\_traction.cpp}, \texttt{test\_flexion.cpp}, \texttt{test\_shear.cpp} : Cas tests classiques d'élasticité plane pour un matériau homogène isotrope, avec des conditions aux limites spécifiques pour chaque cas : validation du code EF.
     \item \texttt{test\_composite.cpp} : Cas composite général qui effectue les trois chargements de référence sur un VER issu de la segmentation U-Net, et extrait les propriétés homogénéisées.
-    \item \texttt{test\_utils.cpp} : Calcule les solutions analytiques, les erreurs, les ordres, export de fichier CSV. Cela sert aussi à configurer des paramétrages de CL récurrents : \texttt{applyDistributedForce()}, \texttt{applyShearDirichletBC()}, etc...
+    \item \texttt{test\_utils.cpp} : Calcule les solutions analytiques, les erreurs, les ordres, export de fichier CSV, etc...
 \end{itemize}
 
 L'ensemble du code est orchestré par un fichier \texttt{main.cpp} qui lit la configuration, charge le maillage, initialise les matériaux, et appelle le solveur pour exécuter le cas de test sélectionné. Les résultats sont exportés pour analyse et visualisation. Pour la compilation, un Makefile gère les dépendances et les options de compilation, avec des cibles spécifiques pour chaque cas de test. \\
@@ -831,7 +843,7 @@ $U_h$, $\varepsilon_h$, $\sigma_h$ sont les approximations EF du déplacement, d
 
 \section{Homogénéisation numérique dans le plan transverse}
 
-Nous étudions désormais le comportement effectif du composite C/C dans le plan transverse, c'est-à-dire perpendiculaire à l'axe des fibres. Le matériau est alors supposé isotrope dans ce plan, avec des propriétés effectives à déterminer par homogénéisation numérique. Le maillage est généré à partir de la segmentation U-Net, qui fournit une géométrie réaliste du VER du composite, en omettant les porosités dans un premier temps. Les propriétés effectives sont extraites avec une démarche similaire aux cas tests de validation, en appliquant des chargements de traction dans les deux directions, et un chargement de cisaillement pur, pour calculer l'intégralité des propriétés effectives dans ce plan : $E_1$, $E_2$, $\nu_{12}$, et $G_{12}$. \\ 
+Nous étudions désormais le comportement effectif du composite C/C dans le plan transverse, c'est-à-dire perpendiculaire à l'axe des fibres. Le matériau est alors supposé isotrope dans ce plan, avec des propriétés effectives à déterminer par homogénéisation numérique. Le maillage est généré à partir de la segmentation U-Net, qui fournit une géométrie réaliste du VER du composite, en omettant les porosités dans un premier temps. Les propriétés effectives sont extraites avec une démarche similaire aux cas tests de validation, en appliquant des chargements de traction dans les deux directions, et un chargement de cisaillement pur, pour calculer l'intégralité des propriétés effectives dans ce plan : $E_{11}$, $E_{22}$, $\nu_{12}$, et $G_{12}$. \\ 
 
 Pour le choix des propriétés isotropes individuelles des fibres et de la matrice, nous avons utilisé des données issues de la littérature sur les composites C/C type CVI (Chemical Vapor Infiltration) à base de fibres de la famille PAN et de matrices pyrocarbone. L'article Microstructure and elastic properties of individual components of C/C composites de Ozcan et al. (2009) fournit des valeurs typiques pour les modules d'Young de la fibre et matrice après traitement thermique HTT (High Temperature Treatment). Les coefficients de Poisson sont extraits d'une thèse effectuée au LCTS "".
 \begin{itemize}
@@ -839,6 +851,7 @@ Pour le choix des propriétés isotropes individuelles des fibres et de la matri
     \item Matrice : $E_m = 12$ GPa, $\nu_m = 0{,}30$
 \end{itemize}
 
+\vspace{0.2cm}
 Ces valeurs peuvent sembler faibles,, mais la fibre et matrice dans un composite C/C sont très anisotropes, et les propriétés dans le plan transverse sont beaucoup plus faibles que dans la direction longitudinale. Ces valeurs sont aussi cohérentes avec des données expérimentales issues d'autres études comme "Transverse Properties of Carbon Fibres by Nano-Indentation and Micromechanics" ou encore "On the determination of the elastic constants of carbon fibres by nanoindentation tests". Nous avons volontairement choisi les propriétés de l'article d'Ozcan ayant subi un HTT, car cela augmente le contraste entre les propriétés de la fibre et matrice, ce qui rend l'étude du composite plus intéressante (sans HTT, module similaire de 18 GPa, pas de comparaison possible). \\
 
 Pour les paramètres de la simulation, nous utilisons le gradient conjugué préconditionné avec un préconditionneur de Cholesky incomplet, pour les paramètres du solveur, nous fixons :
@@ -848,6 +861,7 @@ Pour les paramètres de la simulation, nous utilisons le gradient conjugué pré
     \item Nombre de threads : 16
 \end{itemize}
 
+\vspace{0.2cm}
 La tolérance est standard pour un problème complexe comme celui-ci, et le nombre d'itérations maximum permet de garantir la convergence même pour des maillages très fins avec des centaines de milliers d'éléments.
 
 \subsection{Méthode d'extraction des propriétés effectives}
@@ -863,7 +877,7 @@ La tolérance est standard pour un problème complexe comme celui-ci, et le nomb
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figures/conv_maillage1.png}
-    \caption{Étude de convergence en maillage pour le composite, pour les propriétés effectives $E_{1}$, $E_{2}$, $\nu_{12}$, $G_{12}$ qui sont normalisées. Différentes tailles de mailles sont utilisées}
+    \caption{Étude de convergence en maillage pour le composite, pour les propriétés effectives $E_{11}$, $E_{22}$, $\nu_{12}$, $G_{12}$ qui sont normalisées. Différentes tailles de mailles sont utilisées}
     \label{fig:validation_convergence_composite}
 \end{figure}
 
@@ -873,7 +887,7 @@ La tolérance est standard pour un problème complexe comme celui-ci, et le nomb
     \setlength{\tabcolsep}{3pt}
     \begin{tabular}{|c|c|c|c|c|c|c|c|c|}
         \hline
-        Downscale & $h$ & $N_{\text{elems}}$ & $E_1$ (GPa) & $E_2$ (GPa) & $G_{12}$ (GPa) & $v_{12}$ & $v_{21}$ & $t_{\text{cpu}}$ \\
+        Downscale & $h$ & $N_{\text{elems}}$ & $E_{11}$ (GPa) & $E_{22}$ (GPa) & $G_{12}$ (GPa) & $\nu_{12}$ & $\nu_{21}$ & $t_{\text{cpu}}$ \\
         \hline
         20 & 0,0098 & 7752   & 17,213 & 17,159 & 6,7277 & 0,25719 & 0,24561 & 0,358 \\
         15 & 0,0074 & 13872  & 17,939 & 17,906 & 7,0298 & 0,25678 & 0,24546 & 0,548 \\
@@ -1049,7 +1063,7 @@ Le module d'élasticité (1000 fois plus faible que la matrice) permet de simule
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.8\textwidth]{figures/pores/mesh.png}
-    \caption{Maillage utilisé pour les simulations de porosité, généré par U-Net. Matrice (bleu), Fibre (blanc), Porosité (rouge).}
+    \caption{Maillage utilisé pour les simulations de porosité, généré par U-Net. Matrice (bleu), Fibre (gris), Porosité (rouge).}
     \label{fig:mesh_pores}
 \end{figure}
 
