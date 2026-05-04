@@ -4,8 +4,8 @@ test_type = composite
 
 element_type = Q1
 # Fichier de maillage
-#mesh_file = mesh/composite_convergence/composite1_vf0.452_3.msh
-mesh_file = mesh/composite_T/composite1_vf0.452.msh
+#mesh_file = mesh/composite_convergence/composite1_vf0.452_15.msh
+mesh_file = mesh/composite_T/composite26_pore.msh
 dimension_scale = 1
 E = 12e9
 nu = 0.3

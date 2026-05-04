@@ -60,7 +60,14 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     solver.assemble();
     
     // Conditions aux limites: encastrement à gauche, force à droite
-    for (int id : mesh.leftNodes) solver.setDirichletBC(id, 0, 0.0), solver.setDirichletBC(id, 1, 0.0);
+    for (int id : mesh.leftNodes) solver.setDirichletBC(id, 0, 0.0);
+    for (int id : mesh.findNodesAtY(mesh.yMax / 2.0)) {
+        // on regarde si le noeud est bien à gauche
+        const Node& node = mesh.getNode(id);
+        if (abs(node.coords.x() - mesh.xMin) < 1e-6) {
+            solver.setDirichletBC(id, 1, 0.0);
+        }
+    }
     applyDistributedForce(solver, mesh, mesh.rightNodes, config.forceValue, 0);
     
     solver.applyBC();
@@ -124,8 +131,15 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     
     // Encastrement en bas, force en haut
     for (int id : mesh.bottomNodes) {
-        solver.setDirichletBC(id, 0, 0.0);
         solver.setDirichletBC(id, 1, 0.0);
+    }
+
+    for (int id : mesh.findNodesAtX(mesh.xMax / 2.0)) {
+        // on regarde si le noeud est bien en bas
+        const Node& node = mesh.getNode(id);
+        if (abs(node.coords.y() - mesh.yMin) < 1e-6) {
+            solver.setDirichletBC(id, 0, 0.0);
+        }
     }
 
     applyDistributedForce(solver, mesh, mesh.topNodes, config.forceValue, 1);
@@ -154,9 +168,9 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     cout << " v21 : " << comp.v21 << endl;
 
     cout << "\nComparaison symétrie de C :" << endl;
-    double C12 = comp.v12 / comp.E2;
-    double C21 = comp.v21 / comp.E1; 
-    cout << " v21/E1 = " << C21 << ", v12/E2 = " << C12 << "(Delta = " << abs(C21 - C12) << ")" << endl;
+    double C12 = comp.v12 / comp.E1;
+    double C21 = comp.v21 / comp.E2; 
+    cout << " v21/E2 = " << C21 << ", v12/E1 = " << C12 << "(Delta = " << abs(C21 - C12) << ")" << endl;
     cout << " Delta_W_rel =" << dWrel << endl;
     // Test de cisaillement
     solver.clearBCs();

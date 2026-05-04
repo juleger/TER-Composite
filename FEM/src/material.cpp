@@ -63,7 +63,7 @@ void CompositeMaterial::computeVoigtReussBounds() {
     G12_hill = 0.5 * (G12_voigt + G12_reuss);
 
     // Halpin-Tsai.
-    const double epsilon_ht = 1.0;
+    const double epsilon_ht = 0.8;
     const double vf_total = max(V_fiber + V_matrix + V_pore, eps);
     const double f = max(0.0, min(1.0, V_fiber / vf_total));
     const double vm = max(V_matrix + V_pore, eps);
