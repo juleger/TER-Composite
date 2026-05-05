@@ -255,6 +255,22 @@ void applyShearTransverseDirichletBC(Solver& solver, const Mesh& mesh, double ga
     }
 }
 
+void applyShearRightDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget) {
+    // Encastrement complet à gauche, déplacement vertical imposé sur le côté droit
+    for (int id : mesh.leftNodes) {
+        solver.setDirichletBC(id, 0, 0.0);
+        solver.setDirichletBC(id, 1, 0.0);
+    }
+
+    for (int id : mesh.rightNodes) {
+        const double x = mesh.getNode(id).coords.x();
+        // déplacement vertical proportionnel à la coordonnée x relative (zéro à gauche)
+        solver.setDirichletBC(id, 1, gammaTarget * (x - mesh.xMin));
+        // verrouiller horizontalement pour éviter les modes rigides
+        solver.setDirichletBC(id, 0, 0.0);
+    }
+}
+
 vector<ConvergenceResult> runConvergence(
     const vector<string>& meshFiles,
     const vector<double>& meshLc,

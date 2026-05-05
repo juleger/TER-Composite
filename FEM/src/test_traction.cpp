@@ -41,7 +41,7 @@ void runTractionTest(const vector<string>& meshFiles,const vector<double>& meshL
             const double A = totalForce / gaussIntegral;
 
             
-
+            
             applyDistributedForce(solver, mesh, mesh.rightNodes,
                 [A, yMid, sigma](double y) {
                     return A * std::exp(-((y - yMid) * (y - yMid)) / (2.0 * sigma * sigma));

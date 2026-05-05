@@ -247,7 +247,7 @@ def etude_vf_plots(out_dir=None):
         return E_m * (1 + xi * eta * vf) / (1 - eta * vf)
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(df['vf'], df['ET']/1e9, 'o--', label=r'$E_T$ (données)', linewidth=1.5, markersize=7, color="black", zorder=10)
+    ax.plot(df['vf'], df['ET']/1e9, 'o--', label=r'$E_{T}$ (données)', linewidth=1.5, markersize=7, color="black", zorder=10)
     if E_m is not None and E_f is not None:
         ax.plot(vf_vals, voigt_E(vf_vals)/1e9, '-', color=COLOR_PALETTE[1], label='Voigt', linewidth=2)
         ax.plot(vf_vals, reuss_E(vf_vals)/1e9, '-', color=COLOR_PALETTE[2], label='Reuss', linewidth=2)
@@ -343,6 +343,61 @@ def etude_vf_plots(out_dir=None):
     ax.grid(True, ls='--', alpha=0.3)
     fig.tight_layout()
     fig.savefig('etude_vf_nu.png', dpi=200) 
+    # --- Metrics comparing data to theoretical bounds ---
+    def compute_metrics(data_vals, model_vals):
+        data = np.array(data_vals, dtype=float)
+        model = np.array(model_vals, dtype=float)
+        eps = 1e-30
+        rel = (data - model) / np.maximum(np.abs(model), eps)
+        mae = np.mean(np.abs(rel))
+        rmse = np.sqrt(np.mean(rel**2))
+        mean_rel = np.mean(rel)
+        std_rel = np.std(rel)
+        max_abs = np.max(np.abs(rel))
+        return {'mean_rel': mean_rel, 'std_rel': std_rel, 'mae': mae, 'rmse': rmse, 'max_abs': max_abs}
+
+    # Prepare arrays
+    vf_data = df['vf'].values
+    ET_data = df['ET'].values
+    G_data = df['G12'].values
+
+    # Models evaluated at data vf points
+    E_voigt_at = voigt_E(vf_data)
+    E_reuss_at = reuss_E(vf_data)
+    E_hill_at = hill_E(vf_data)
+    E_halpin_at = halpin_tsai_E(vf_data, xi=0.6)
+
+    G_voigt_at = voigt_G(vf_data)
+    G_reuss_at = reuss_G(vf_data)
+    G_hill_at = hill_G(vf_data)
+    G_halpin_at = halpin_tsai_G(vf_data, xi=0.8)
+
+    # Compute metrics for E_T
+    metrics_E_voigt = compute_metrics(ET_data, E_voigt_at)
+    metrics_E_reuss = compute_metrics(ET_data, E_reuss_at)
+    metrics_E_hill = compute_metrics(ET_data, E_hill_at)
+    metrics_E_halpin = compute_metrics(ET_data, E_halpin_at)
+
+    # Compute metrics for G_LT
+    metrics_G_voigt = compute_metrics(G_data, G_voigt_at)
+    metrics_G_reuss = compute_metrics(G_data, G_reuss_at)
+    metrics_G_hill = compute_metrics(G_data, G_hill_at)
+    metrics_G_halpin = compute_metrics(G_data, G_halpin_at)
+
+    def print_metrics(label, m):
+        print(f"{label}: mean_rel={m['mean_rel']:.6f}, std_rel={m['std_rel']:.6f}, mae={m['mae']:.6f}, rmse={m['rmse']:.6f}, max_abs_rel={m['max_abs']:.6f}")
+
+    print('\nMetrics comparant E_T aux bornes (relatif):')
+    print_metrics('E_T vs Voigt', metrics_E_voigt)
+    print_metrics('E_T vs Reuss', metrics_E_reuss)
+    print_metrics('E_T vs Hill', metrics_E_hill)
+    print_metrics('E_T vs Halpin-Tsai', metrics_E_halpin)
+
+    print('\nMetrics comparant G_LT aux bornes (relatif):')
+    print_metrics('G_LT vs Voigt', metrics_G_voigt)
+    print_metrics('G_LT vs Reuss', metrics_G_reuss)
+    print_metrics('G_LT vs Hill', metrics_G_hill)
+    print_metrics('G_LT vs Halpin-Tsai', metrics_G_halpin)
 
 
 def main():

@@ -218,6 +218,73 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     comp.printC();
     comp.printS();
     comp.printProperties();
+    
+    // Test G21 : cisaillement appliqué sur le côté droit, encastrement à gauche
+    solver.clearBCs();
+    solver.clearSystem();
+    cout << "\n-------- Résolution du cisaillement G21 (droite encastrement gauche) ---------\n" << endl;
+    solver.assemble();
+    double gammaTarget21 = 1.0e-3;
+    applyShearRightDirichletBC(solver, mesh, gammaTarget21);
+    solver.applyBC();
+    auto start_g21 = chrono::high_resolution_clock::now();
+    solver.solveConjugateGradient();
+    auto end_g21 = chrono::high_resolution_clock::now();
+    double tcpu_g21 = chrono::duration<double>(end_g21 - start_g21).count();
+    cout << "Temps de résolution GC (cisaillement G21): " << tcpu_g21 << " s" << endl;
+    solver.computeStrainStress();
+    Wint = solver.computeInternalEnergy();
+    solver.saveVTK(compositeVtkAlias(meshFile, "shear_g21"));
+
+    // Mesures
+    U = solver.getU();
+    double uy_right = calcDisp(mesh.rightNodes, 1);
+    double uy_left = calcDisp(mesh.leftNodes, 1);
+    double gamma21 = (uy_right - uy_left) / max(L, 1e-30);
+
+    // Calcul robuste: contrainte de cisaillement moyenne issue du champ FE.
+    const Eigen::MatrixXd stress_g21 = solver.getStress();
+    double sumTauA_g21 = 0.0;
+    double sumArea_g21 = 0.0;
+    for (int e = 0; e < mesh.nbElements(); ++e) {
+        const double area = mesh.elements[e]->area;
+        sumTauA_g21 += stress_g21(e, 2) * area;
+        sumArea_g21 += area;
+    }
+    const double tau_yx = sumTauA_g21 / max(sumArea_g21, 1e-30);
+
+    // Estimation énergétique globale
+    const double V_shear_g21 = max(L * H, 1e-30);
+    const double G21_energy = 2.0 * Wint / max(gammaTarget21 * gammaTarget21 * V_shear_g21, 1e-30);
+
+    double G21_fem = tau_yx / max(gamma21, 1e-30);
+    cout << "\n-------- Propriétés cisaillement G21 :" << endl;
+    cout << " G21_energy = " << G21_energy/1e9 << " GPa" << endl;
+    cout << " G21_FEM = " << G21_fem/1e9 << " GPa" << endl;
+    cout << " tau_yx moyen = " << tau_yx/1e6 << " MPa" << endl;
+    cout << " gamma21 mesuré = " << gamma21 << " (cible: " << gammaTarget21 << ")" << endl;
+
+    // Export CSV pour G21
+    string meshNameG = meshFile;
+    size_t startG = meshNameG.find_last_of('/') + 1;
+    size_t endG = meshNameG.find_last_of('.');
+    if (endG == string::npos) endG = meshNameG.size();
+    meshNameG = meshNameG.substr(startG, endG - startG);
+    string csvG21 = "results/proprietes_" + meshNameG + "_G21.csv";
+    ofstream csv2(csvG21);
+    if (csv2.is_open()) {
+        csv2 << fixed << setprecision(8);
+        csv2 << "Property,Value\n";
+        csv2 << "G21_energy," << G21_energy << "\n";
+        csv2 << "G21_FEM," << G21_fem << "\n";
+        csv2 << "tau_yx," << tau_yx << "\n";
+        csv2 << "gamma21," << gamma21 << "\n";
+        csv2 << "tcpug21," << tcpu_g21 << "\n";
+        csv2.close();
+        cout << "Fichier CSV G21 exporté : " << csvG21 << "\n" << endl;
+    } else {
+        cerr << "Impossible d'écrire: " << csvG21 << "\n";
+    }
     // Export des propriétés effectives vers CSV
     string meshName = meshFile;
     size_t start = meshName.find_last_of('/') + 1;
@@ -230,8 +297,8 @@ void runCompositeTest(const string& meshFile, const Config& config) {
     }
 
     if (!config.planTransverse) {
-        // Test longitudinal : estimations analytiques pour E3
-        cout << "------------------ TEST LONGITUDINAL ------------------" << endl;
+        // Test 1 : Traction longitudinale pour extraire E3
+        cout << "------------------ TEST 1 - TRACTION LONGITUDINALE ------------------" << endl;
         cout << "Fichier de maillage: " << meshFile << endl;
         cout << "Nombres de threads: " << omp_get_max_threads() << endl;
 
@@ -259,32 +326,109 @@ void runCompositeTest(const string& meshFile, const Config& config) {
         if (config.hasPores) { cout << ", Pore = " << comp.V_pore; }
         cout << endl;
 
-        // Estimations analytiques pour E3 (direction transverse/longitudinale)
+        // Résolution de la traction longitudinale (selon direction longitudinale)
+        cout << "\n-------- Résolution de la traction longitudinale ---------\n" << endl;
+        Solver solver(mesh, config.solverTolerance, config.solverMaxIter);
+        applySolverConfig(solver, config);
+        solver.assemble();
+        
+        for (int id : mesh.leftNodes) solver.setDirichletBC(id, 0, 0.0);
+        for (int id : mesh.findNodesAtY(mesh.yMax / 2.0)) {
+            const Node& node = mesh.getNode(id);
+            if (abs(node.coords.x() - mesh.xMin) < 1e-6) {
+                solver.setDirichletBC(id, 1, 0.0);
+            }
+        }
+        applyDistributedForce(solver, mesh, mesh.rightNodes, config.forceValue, 0);
+        
+        solver.applyBC();
+        auto start_long = chrono::high_resolution_clock::now();
+        solver.solveConjugateGradient();
+        auto end_long = chrono::high_resolution_clock::now();
+        double tcpu_long = chrono::duration<double>(end_long - start_long).count();
+        cout << "Temps de résolution GC (traction longitudinale): " << tcpu_long << " s" << endl;
+        solver.computeStrainStress();
+        solver.saveVTK(compositeVtkAlias(meshFile, "traclong"));
+        
+        // Calcul de E3 à partir de la traction longitudinale
+        Eigen::VectorXd U = solver.getU();
+        auto calcDisp = [&](const vector<int>& nodes, int dof) {
+            double sum = 0.0;
+            for (int id : nodes) sum += U(2*(id-1) + dof);
+            return sum / max<size_t>(1, nodes.size());
+        };
+        
+        double uy_top = calcDisp(mesh.topNodes, 1);
+        double uy_bottom = calcDisp(mesh.bottomNodes, 1);
+        double ux_right = calcDisp(mesh.rightNodes, 0);
+        double ux_left = calcDisp(mesh.leftNodes, 0);
+        
+        double H = mesh.height();
+        double L = mesh.width();
+
+        // Déformation longitudinale
+        double epsilon_long = (ux_right - ux_left) / max(L, 1e-30);
+        double epsilon_trans = (uy_top - uy_bottom) / max(H, 1e-30);
+        
+        // Contrainte appliquée
+        double sigma_long = config.forceValue / max(H, 1e-30);
+        
+        // Calcul de E3
+        const double eps = 1e-30;
+        double E3 = sigma_long / max(abs(epsilon_long), eps);
+        double nu = -epsilon_trans / max(abs(epsilon_long), eps);
+
+        // Bornes analytiques Voigt/Reuss/Hill en longitudinal
         double E3_voigt = V_fiber * fiber.E + V_matrix * matrix.E + V_pore * pore.E;
-        double E3_reuss = 1.0 / (V_fiber / fiber.E + V_matrix / matrix.E + V_pore / pore.E);
+        double E3_reuss = 1.0 / max(V_fiber / max(fiber.E, eps)
+                      + V_matrix / max(matrix.E, eps)
+                      + V_pore / max(pore.E, eps), eps);
         double E3_hill = 0.5 * (E3_voigt + E3_reuss);
 
-        cout << "\n-------- Propriétés effectives longitudinales :" << endl;
-        cout << " E3 : " << E3_voigt/1e9 << " GPa (Voigt), " << E3_reuss/1e9 << " GPa (Reuss), " << E3_hill/1e9 << " GPa (Hill)" << endl;
+        double nu_voigt = V_fiber * fiber.nu + V_matrix * matrix.nu + V_pore * pore.nu;
+        double nu_reuss = 1.0 / max(V_fiber / max(fiber.nu, eps)
+                      + V_matrix / max(matrix.nu, eps)
+                      + V_pore / max(pore.nu, eps), eps);
+        double nu_hill = 0.5 * (nu_voigt + nu_reuss);
 
-        // Export CSV
+        double Wint = solver.computeInternalEnergy();
+        double Wext = solver.computeExternalWork();
+        double dWrel = abs(Wint - Wext) / max(abs(Wint), 1e-30);
+        
+        cout << "\n-------- Propriétés effectives :" << endl;
+           cout << " E3 : " << E3/1e9 << " GPa"
+               << " (Voigt: " << E3_voigt/1e9 << " GPa, Reuss: " << E3_reuss/1e9 << " GPa, Hill: " << E3_hill/1e9 << " GPa)" << endl;
+           cout << " nu : " << nu
+               << " (Voigt: " << nu_voigt << ", Reuss: " << nu_reuss << ", Hill: " << nu_hill << ")" << endl;
+        cout << " Déformation longitudinale : " << epsilon_long << endl;
+           cout << " Déformation transverse : " << epsilon_trans << endl;
+        cout << " Contrainte appliquée : " << sigma_long/1e6 << " MPa" << endl;
+        cout << " Delta W_rel = " << dWrel << endl;
+
+        // Export des propriétés effectives vers CSV
         string meshName = meshFile;
         size_t start = meshName.find_last_of('/') + 1;
         size_t end = meshName.find_last_of('.');
         if (end == string::npos) end = meshName.size();
         meshName = meshName.substr(start, end - start);
-        string csvFile = "results/proprietes_longitudinal_" + meshName + ".csv";
+        string csvFile = "results/proprietes_" + meshName + "_E3.csv";
         ofstream csv(csvFile);
         if (!csv.is_open()) { cerr << "Impossible d'écrire: " << csvFile << "\n"; return; }
         csv << fixed << setprecision(8);
         csv << "Property,Voigt,Reuss,Hill\n";
         csv << "h," << h << ",,\n";
         csv << "E3," << E3_voigt << "," << E3_reuss << "," << E3_hill << "\n";
+        csv << "E3_FEM," << E3 << ",,\n";
+        csv << "nu," << nu_voigt << "," << nu_reuss << "," << nu_hill << "\n";
+        csv << "nu_FEM," << nu << ",,\n";
+        csv << "epsilon_long," << epsilon_long << ",,\n";
+        csv << "epsilon_trans," << epsilon_trans << ",,\n";
+        csv << "sigma_long," << sigma_long << ",,\n";
         csv << "V_fiber," << comp.V_fiber << ",,\n";
         csv << "V_matrix," << comp.V_matrix << ",,\n";
         csv << "V_pore," << comp.V_pore << ",,\n";
-        csv << "tcpumax,0.0,\n";
+        csv << "tcpumax," << tcpu_long << ",,\n";
         csv.close();
-        cout << "Fichier CSV des propriétés longitudinales exporté : " << csvFile << "\n" << endl;
+        cout << "Fichier CSV des propriétés exporté : " << csvFile << "\n" << endl;
     }
 }

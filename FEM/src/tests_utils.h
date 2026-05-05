@@ -51,6 +51,8 @@ void applyShearDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget)
 
 void applyShearTransverseDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget);
 
+void applyShearRightDirichletBC(Solver& solver, const Mesh& mesh, double gammaTarget);
+
 std::vector<ConvergenceResult> runConvergence(
     const std::vector<std::string>& meshFiles,
     const std::vector<double>& meshLc,
